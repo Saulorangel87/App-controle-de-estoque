@@ -31,6 +31,36 @@
   --fonte: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
+/*
+  Tema escuro: redefine só as variáveis de cor, todo o resto do CSS (espaçamento,
+  raio, componentes) permanece igual — é por isso que centralizamos tudo em
+  variáveis desde o início, essa troca fica barata.
+*/
+[data-theme="escuro"] {
+  --cor-fundo: #14171c;
+  --cor-superficie: #1e2229;
+  --cor-borda: #2e333d;
+  --cor-texto: #e5e7eb;
+  --cor-texto-secundario: #9aa1ac;
+
+  --cor-primaria: #14b981;
+  --cor-primaria-hover: #17d494;
+  --cor-perigo: #f27272;
+  --cor-perigo-fundo: #3a2020;
+}
+
+/* Transição suave só nas propriedades de cor, para a troca de tema não parecer abrupta,
+   mas sem violar prefers-reduced-motion (já tratado no bloco de media query abaixo) */
+body,
+.cartao,
+.tabela-container,
+.modal-caixa,
+.caixa-login,
+input,
+select {
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
 /* Reset simples e previsível */
 * {
   box-sizing: border-box;
@@ -81,11 +111,27 @@ button {
   border: 0;
 }
 
+html,
+body,
+#root {
+  height: 100%;
+}
+
+/* Estrutura em coluna que garante o rodapé sempre no fim da tela — veja App.jsx */
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
 /* ---------- Layout genérico ---------- */
 .pagina {
   max-width: 1000px;
   margin: 0 auto;
   padding: var(--espaco-5) var(--espaco-4);
+  padding-bottom: 60px;
+  flex: 1;
+  width: 100%;
 }
 
 .cabecalho-pagina {
@@ -331,11 +377,13 @@ tr:last-child td {
 
 /* ---------- Tela de login ---------- */
 .pagina-login {
-  min-height: 100vh;
+  flex: 1;
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: var(--espaco-4);
+  padding-bottom: 60px;
 }
 
 .caixa-login {
@@ -360,4 +408,53 @@ tr:last-child td {
   font-weight: 600;
   padding: 0;
   margin-top: var(--espaco-3);
+}
+
+.link-recuperar-senha {
+  background: none;
+  border: none;
+  color: var(--cor-texto-secundario);
+  font-size: 0.8rem;
+  padding: 0;
+  margin-top: var(--espaco-2);
+  display: block;
+}
+.link-recuperar-senha:hover {
+  color: var(--cor-texto);
+  text-decoration: underline;
+}
+
+/* ---------- Cabeçalho: badge de conta e botão de tema ---------- */
+.acoes-cabecalho {
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-2);
+}
+
+.badge-conta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background-color: var(--cor-primaria);
+  color: #ffffff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.botao-tema {
+  background: transparent;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-pequeno);
+  padding: 8px 10px;
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--cor-texto);
+}
+.botao-tema:hover {
+  background-color: var(--cor-fundo);
 }

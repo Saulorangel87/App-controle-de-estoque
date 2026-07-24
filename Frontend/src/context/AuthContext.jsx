@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useCallback } from "react";
+import { createContext, useContext, useState, useCallback, useMemo } from "react";
+import { decodificarToken } from "../utils/jwt.js";
 
 const AuthContext = createContext(null);
 
@@ -21,8 +22,17 @@ export function AuthProvider({ children }) {
     setToken(null);
   }, []);
 
+  // O nome do usuário já vem dentro do próprio token (claim "nome"), definido
+  // no login pelo backend — não precisamos de uma chamada extra à API só para exibir isso.
+  const nome = useMemo(() => {
+    if (!token) return "";
+    const payload = decodificarToken(token);
+    return payload?.nome ?? "";
+  }, [token]);
+
   const valor = {
     token,
+    nome,
     estaLogado: Boolean(token),
     entrar,
     sair,

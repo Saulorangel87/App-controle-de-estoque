@@ -1,0 +1,11 @@
+# Backend
+Backend/.env
+Backend/estoque.db
+
+# Frontend
+Frontend/node_modules
+Frontend/dist
+Frontend/.env
+
+# Deploy em produção (só existe na VM, nunca no seu PC)
+data/

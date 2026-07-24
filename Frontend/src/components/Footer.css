@@ -1,0 +1,56 @@
+/*
+  O rodapé usa uma cor de fundo fixa e escura em vez de seguir as variáveis
+  --cor-superficie do tema (que mudam entre claro/escuro) — é uma "assinatura"
+  visual consistente do desenvolvedor, igual nos outros projetos, então não
+  faz sentido ela clarear junto com o resto da interface no tema claro.
+*/
+.rodape-fixo {
+  background-color: var(--cor-superficie);
+  color: var(--cor-texto-secundario);
+  border-top: 1px solid var(--cor-borda);
+
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+
+  padding: 10px 16px;
+  font-family: "Courier New", Consolas, monospace;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  text-align: center;
+}
+
+.rodape-icones {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.rodape-fixo a {
+  color: var(--cor-texto-secundario);
+  display: inline-flex;
+  align-items: center;
+  padding: 4px;
+}
+
+.rodape-fixo a:hover {
+  color: var(--cor-texto);
+}
+
+/* Em telas bem estreitas, o texto do copyright quebra para uma linha própria
+   e os ícones ficam centralizados embaixo, em vez de espremer tudo numa linha só */
+@media (max-width: 420px) {
+  .rodape-fixo {
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 12px;
+  }
+}

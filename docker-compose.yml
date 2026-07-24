@@ -1,0 +1,31 @@
+services:
+  backend:
+    build:
+      context: ./Backend
+      dockerfile: ../Backend.Dockerfile
+    container_name: estoque-backend
+    restart: unless-stopped
+    env_file:
+      - ./Backend/.env
+    environment:
+      # Domínio real do frontend em produção, para o CORS liberar exatamente essa origem.
+      CORS_ORIGIN: "https://estoque.devsaulo.com.br"
+      # Caminho dentro do volume abaixo — sobrevive a "docker compose up -d --build".
+      DB_PATH: "/app/data/estoque.db"
+    volumes:
+      - ./data:/app/data
+    ports:
+      - "8090:8080"
+
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: ../Frontend.Dockerfile
+      args:
+        # Precisa bater com o domínio real da API — é "gravado" no JavaScript
+        # durante o build, então build args (não environment) é o jeito certo.
+        VITE_API_URL: "https://estoque-api.devsaulo.com.br"
+    container_name: estoque-frontend
+    restart: unless-stopped
+    ports:
+      - "8091:80"

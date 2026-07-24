@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
+import { useTheme } from "../context/ThemeContext.jsx";
 import {
   listarItens,
   adicionarItem,
@@ -14,7 +15,8 @@ import ModalFormularioItem from "../components/ModalFormularioItem.jsx";
 import ModalRetirar from "../components/ModalRetirar.jsx";
 
 export default function Dashboard() {
-  const { token, sair } = useAuth();
+  const { token, nome, sair } = useAuth();
+  const { tema, alternarTema } = useTheme();
 
   const [itens, setItens] = useState([]);
   const [carregando, setCarregando] = useState(true);
@@ -22,6 +24,7 @@ export default function Dashboard() {
 
   const [busca, setBusca] = useState("");
   const [filtroLocal, setFiltroLocal] = useState("");
+  const [apenasEstoqueBaixo, setApenasEstoqueBaixo] = useState(false);
 
   // Controla qual modal está aberto e com qual item (null = modal fechado / novo item)
   const [itemEmEdicao, setItemEmEdicao] = useState(undefined); // undefined = fechado
@@ -44,17 +47,36 @@ export default function Dashboard() {
     carregarItens();
   }, [carregarItens]);
 
+  // Mostra só o primeiro e o segundo nome da conta no cabeçalho (ex: "Saulo Rangel
+  // Silva" vira "Saulo Rangel"), para não estourar o layout com nomes longos.
+  const nomeExibicao = useMemo(() => {
+    const partes = nome.trim().split(/\s+/).filter(Boolean);
+    return partes.slice(0, 2).join(" ");
+  }, [nome]);
+
+  const iniciaisConta = useMemo(() => {
+    const partes = nome.trim().split(/\s+/).filter(Boolean);
+    return partes
+      .slice(0, 2)
+      .map((parte) => parte[0])
+      .join("")
+      .toUpperCase();
+  }, [nome]);
+
   // useMemo evita recalcular a lista filtrada a cada renderização,
-  // só refaz quando os itens, a busca ou o filtro realmente mudam.
+  // só refaz quando os itens ou algum dos filtros realmente mudam.
   const itensFiltrados = useMemo(() => {
     return itens.filter((item) => {
       const bateBusca = item.nome
         .toLowerCase()
         .includes(busca.trim().toLowerCase());
       const bateLocal = filtroLocal ? item.local === filtroLocal : true;
-      return bateBusca && bateLocal;
+      const bateEstoqueBaixo = apenasEstoqueBaixo
+        ? item.quantidade <= item.estoque_minimo
+        : true;
+      return bateBusca && bateLocal && bateEstoqueBaixo;
     });
-  }, [itens, busca, filtroLocal]);
+  }, [itens, busca, filtroLocal, apenasEstoqueBaixo]);
 
   const resumo = useMemo(() => {
     const emEstoqueBaixo = itens.filter(
@@ -103,7 +125,8 @@ export default function Dashboard() {
           <h1>Estoque</h1>
           <p className="subtitulo">{resumo.total} itens cadastrados</p>
         </div>
-        <div style={{ display: "flex", gap: "8px" }}>
+
+        <div className="acoes-cabecalho">
           <button
             type="button"
             className="botao botao-primario"
@@ -111,6 +134,28 @@ export default function Dashboard() {
           >
             + Item
           </button>
+
+          <button
+            type="button"
+            className="botao-tema"
+            onClick={alternarTema}
+            aria-label={
+              tema === "claro" ? "Mudar para tema escuro" : "Mudar para tema claro"
+            }
+          >
+            <span aria-hidden="true">{tema === "claro" ? "🌙" : "☀️"}</span>
+          </button>
+
+          {nomeExibicao && (
+            <span
+              className="badge-conta"
+              title={nomeExibicao}
+              aria-label={`Conta: ${nomeExibicao}`}
+            >
+              {iniciaisConta}
+            </span>
+          )}
+
           <button type="button" className="botao botao-secundario" onClick={sair}>
             Sair
           </button>
@@ -128,6 +173,8 @@ export default function Dashboard() {
         aoMudarBusca={setBusca}
         local={filtroLocal}
         aoMudarLocal={setFiltroLocal}
+        apenasEstoqueBaixo={apenasEstoqueBaixo}
+        aoMudarApenasEstoqueBaixo={setApenasEstoqueBaixo}
       />
 
       {erro && (

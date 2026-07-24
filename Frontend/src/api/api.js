@@ -1,6 +1,8 @@
-// Endereço do backend Go. Em produção, troque por uma variável de ambiente do Vite
-// (import.meta.env.VITE_API_URL) apontando para o domínio real da API.
-const URL_BASE = "http://localhost:8080";
+// Em produção, VITE_API_URL é definida no momento do build (docker-compose.yml usa
+// build args para isso, já que variáveis do Vite são "gravadas" no bundle estático,
+// não lidas em tempo de execução). Em desenvolvimento local, sem essa variável, cai
+// de volta para o backend rodando em localhost:8080.
+const URL_BASE = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
 /**
  * Função central de requisição. Todas as chamadas à API passam por aqui,
@@ -41,10 +43,15 @@ async function requisitar(caminho, opcoes = {}, token = null) {
 
 // ---------- Autenticação ----------
 
-export function cadastrar(nome, senha) {
+export function cadastrar(nome, senha, perguntaSeguranca, respostaSeguranca) {
   return requisitar("/cadastro", {
     method: "POST",
-    body: JSON.stringify({ nome, senha }),
+    body: JSON.stringify({
+      nome,
+      senha,
+      pergunta_seguranca: perguntaSeguranca,
+      resposta_seguranca: respostaSeguranca,
+    }),
   });
 }
 
@@ -52,6 +59,19 @@ export function login(nome, senha) {
   return requisitar("/login", {
     method: "POST",
     body: JSON.stringify({ nome, senha }),
+  });
+}
+
+export function obterPerguntaSeguranca(nome) {
+  return requisitar(`/recuperar-senha/pergunta?nome=${encodeURIComponent(nome)}`, {
+    method: "GET",
+  });
+}
+
+export function redefinirSenha(nome, resposta, novaSenha) {
+  return requisitar("/recuperar-senha", {
+    method: "POST",
+    body: JSON.stringify({ nome, resposta, nova_senha: novaSenha }),
   });
 }
 

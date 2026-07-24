@@ -1,6 +1,13 @@
 const LOCAIS = ["Todos os locais", "Despensa", "Geladeira", "Freezer", "Armário"];
 
-export default function BarraFiltros({ busca, aoMudarBusca, local, aoMudarLocal }) {
+export default function BarraFiltros({
+  busca,
+  aoMudarBusca,
+  local,
+  aoMudarLocal,
+  apenasEstoqueBaixo,
+  aoMudarApenasEstoqueBaixo,
+}) {
   return (
     <div className="barra-filtros">
       <div className="campo-busca">
@@ -34,6 +41,17 @@ export default function BarraFiltros({ busca, aoMudarBusca, local, aoMudarLocal 
           ))}
         </select>
       </div>
+
+      {/* Botão de alternância (não checkbox escondido) para ficar visualmente
+          consistente com os outros botões da barra de filtros */}
+      <button
+        type="button"
+        className={`botao ${apenasEstoqueBaixo ? "botao-primario" : "botao-secundario"}`}
+        onClick={() => aoMudarApenasEstoqueBaixo(!apenasEstoqueBaixo)}
+        aria-pressed={apenasEstoqueBaixo}
+      >
+        <span aria-hidden="true">⚠️</span> Estoque baixo
+      </button>
     </div>
   );
 }
