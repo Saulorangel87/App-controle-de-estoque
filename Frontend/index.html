@@ -1,0 +1,31 @@
+<!doctype html>
+<!-- lang="pt-BR" ajuda leitores de tela e mecanismos de busca a identificar o idioma correto -->
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- SEO básico: título e descrição únicos, usados por buscadores e ao compartilhar o link -->
+    <title>Controle de Estoque | Mantimentos de casa</title>
+    <meta
+      name="description"
+      content="Controle o estoque de mantimentos da sua casa: cadastre itens, dê baixa no consumo e receba alertas quando algo estiver acabando."
+    />
+    <meta name="robots" content="noindex" />
+    <!-- noindex: é um app pessoal, autenticado; não faz sentido indexar nos buscadores -->
+
+    <!-- theme-color melhora a experiência em navegadores mobile (barra de status combinando com o app) -->
+    <meta name="theme-color" content="#0f9d6b" />
+
+    <!--
+      Sem fontes externas (Google Fonts etc.) de propósito: usamos a pilha de fontes do
+      próprio sistema operacional. Isso elimina uma requisição de rede inteira e evita
+      atraso de renderização de texto (FOIT/FOUT), o que ajuda diretamente o LCP e o CLS
+      no PageSpeed Insights.
+    -->
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
