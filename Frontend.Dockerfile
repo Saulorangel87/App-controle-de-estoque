@@ -19,5 +19,5 @@ RUN npm run build
 # do que manter o Node rodando em produção só para servir arquivos prontos.
 FROM nginx:alpine
 COPY --from=builder /app/dist /usr/share/nginx/html
-COPY ../nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
