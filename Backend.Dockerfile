@@ -1,5 +1,5 @@
 # Estágio 1: compila o binário Go num ambiente completo com as ferramentas de build
-FROM golang:1.23-alpine AS builder
+FROM golang:1.26.5-alpine AS builder
 WORKDIR /app
 
 # Copia primeiro só os arquivos de dependência — o Docker cacheia essa camada,
