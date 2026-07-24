@@ -107,7 +107,7 @@ export default function Login() {
         >
           {modoCadastro
             ? "Já tenho conta — entrar"
-            : "Ainda não tenho conta — criar"}
+            : "Ainda não tenho conta — Criar"}
         </button>
       </div>
     </main>
