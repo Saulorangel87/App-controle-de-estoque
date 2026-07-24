@@ -28,4 +28,4 @@ services:
     container_name: estoque-frontend
     restart: unless-stopped
     ports:
-      - "8091:80"
+      - "8092:80"
