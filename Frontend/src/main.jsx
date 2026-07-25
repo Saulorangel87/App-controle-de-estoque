@@ -19,3 +19,13 @@ createRoot(document.getElementById("root")).render(
     </BrowserRouter>
   </StrictMode>
 );
+
+// Registra o service worker (public/sw.js) depois que a página termina de
+// carregar, para não competir por recursos de rede com o carregamento inicial.
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch((erro) => {
+      console.error("Falha ao registrar o service worker:", erro);
+    });
+  });
+}
