@@ -4,6 +4,10 @@ Interface em React + Vite para o app de controle de estoque de mantimentos de ca
 
 Em produção: **https://estoque.devsaulo.com.br**
 
+<img width="1366" height="857" alt="Captura de tela 2026-07-24 212800" src="https://github.com/user-attachments/assets/a3c207d4-949a-491a-95e2-1b6f9580e3f1" />
+
+<img width="1897" height="847" alt="Captura de tela 2026-07-24 212728" src="https://github.com/user-attachments/assets/7ce601a5-748d-494b-a2fc-2e849aa572de" />
+
 ## Instalável como app (PWA)
 
 O app pode ser instalado no celular ou no computador como um aplicativo de
