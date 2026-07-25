@@ -130,7 +130,7 @@ body,
   margin: 0 auto;
   padding: var(--espaco-5) var(--espaco-4);
   padding-bottom: 60px;
-  flex: 1;
+  flex: 1; /* ocupa o espaço disponível, empurrando o rodapé para baixo */
   width: 100%;
 }
 
@@ -339,6 +339,12 @@ tr:last-child td {
   max-width: 420px;
 }
 
+/* Variante mais larga, usada só na conferência de itens da importação de nota
+   fiscal — a tabela de itens precisa de mais espaço que um formulário comum. */
+.modal-caixa-larga {
+  max-width: 640px;
+}
+
 .modal-caixa h2 {
   margin-top: 0;
   font-size: 1.15rem;
@@ -377,7 +383,7 @@ tr:last-child td {
 
 /* ---------- Tela de login ---------- */
 .pagina-login {
-  flex: 1;
+  flex: 1; /* ocupa o espaço disponível, empurrando o rodapé para baixo */
   width: 100%;
   display: flex;
   align-items: center;

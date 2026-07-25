@@ -13,6 +13,8 @@ import BarraFiltros from "../components/BarraFiltros.jsx";
 import TabelaItens from "../components/TabelaItens.jsx";
 import ModalFormularioItem from "../components/ModalFormularioItem.jsx";
 import ModalRetirar from "../components/ModalRetirar.jsx";
+import ModalConfirmacao from "../components/ModalConfirmacao.jsx";
+import ModalImportarNota from "../components/ModalImportarNota.jsx";
 
 export default function Dashboard() {
   const { token, nome, sair } = useAuth();
@@ -29,6 +31,8 @@ export default function Dashboard() {
   // Controla qual modal está aberto e com qual item (null = modal fechado / novo item)
   const [itemEmEdicao, setItemEmEdicao] = useState(undefined); // undefined = fechado
   const [itemParaRetirar, setItemParaRetirar] = useState(null);
+  const [itemParaExcluir, setItemParaExcluir] = useState(null);
+  const [importandoNota, setImportandoNota] = useState(false);
 
   const carregarItens = useCallback(async () => {
     setCarregando(true);
@@ -99,17 +103,15 @@ export default function Dashboard() {
     await carregarItens();
   }
 
-  async function confirmarExclusao(item) {
-    // window.confirm é suficiente aqui: ação destrutiva e pouco frequente,
-    // não justifica construir mais um modal customizado só para isso.
-    const confirmado = window.confirm(`Excluir "${item.nome}" do estoque?`);
-    if (!confirmado) return;
-
+  async function excluirItemConfirmado() {
+    if (!itemParaExcluir) return;
     try {
-      await excluirItem(item.id, token);
+      await excluirItem(itemParaExcluir.id, token);
       await carregarItens();
     } catch (e) {
       setErro("Não foi possível excluir o item.");
+    } finally {
+      setItemParaExcluir(null);
     }
   }
 
@@ -127,6 +129,14 @@ export default function Dashboard() {
         </div>
 
         <div className="acoes-cabecalho">
+          <button
+            type="button"
+            className="botao botao-secundario"
+            onClick={() => setImportandoNota(true)}
+          >
+            Importar nota
+          </button>
+
           <button
             type="button"
             className="botao botao-primario"
@@ -192,7 +202,7 @@ export default function Dashboard() {
           <TabelaItens
             itens={itensFiltrados}
             aoEditar={setItemEmEdicao}
-            aoExcluir={confirmarExclusao}
+            aoExcluir={setItemParaExcluir}
             aoRetirar={setItemParaRetirar}
           />
         )}
@@ -211,6 +221,25 @@ export default function Dashboard() {
           item={itemParaRetirar}
           aoFechar={() => setItemParaRetirar(null)}
           aoConfirmar={confirmarRetirada}
+        />
+      )}
+
+      {itemParaExcluir && (
+        <ModalConfirmacao
+          titulo="Excluir item"
+          mensagem={`Tem certeza que deseja excluir "${itemParaExcluir.nome}" do estoque? Essa ação não pode ser desfeita.`}
+          textoConfirmar="Excluir"
+          aoCancelar={() => setItemParaExcluir(null)}
+          aoConfirmar={excluirItemConfirmado}
+        />
+      )}
+
+      {importandoNota && (
+        <ModalImportarNota
+          token={token}
+          itensEstoque={itens}
+          aoFechar={() => setImportandoNota(false)}
+          aoConcluir={carregarItens}
         />
       )}
     </main>

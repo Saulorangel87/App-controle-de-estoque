@@ -1,6 +1,6 @@
 # Notas — Controle de Estoque
 
-**Versão atual: v1.1.0** · Em produção: https://estoque.devsaulo.com.br
+**Versão atual: v1.2.0** · Em produção: https://estoque.devsaulo.com.br · Licença MIT
 
 ## Stack
 - Backend: Go (net/http puro), SQLite (modernc.org/sqlite), bcrypt + JWT
@@ -15,18 +15,19 @@ App controle de estoque/
 ├── Frontend.Dockerfile
 ├── nginx.conf
 ├── .gitignore
+├── LICENSE            → licença MIT
 ├── Backend/
 │   ├── main.go
 │   ├── config/       → chave JWT via variável de ambiente
 │   ├── database/     → conexão SQLite + migração de colunas (DB_PATH configurável)
 │   ├── models/
-│   ├── handlers/      → auth (cadastro/login/recuperação de senha) + itens
-│   └── middleware/    → autenticação JWT
+│   ├── handlers/      → auth (cadastro/login/recuperação de senha) + itens + notas_fiscais (importação NF-e)
+│   └── middleware/    → autenticação JWT + rate limiting (ratelimit.go)
 └── Frontend/
     ├── public/         → manifest.json, sw.js, ícones, robots.txt, llms.txt
     ├── src/api/         → cliente HTTP centralizado (URL via VITE_API_URL)
     ├── src/context/     → Auth + Theme
-    ├── src/components/  → Footer, modais, tabela, filtros, cards
+    ├── src/components/  → Footer, modais (item, retirar, confirmação, importar nota), tabela, filtros, cards
     ├── src/pages/       → Login, Dashboard
     └── src/utils/       → decodificação de JWT, perguntas de segurança
 ```
@@ -43,6 +44,14 @@ App controle de estoque/
 - Rodapé fixo com copyright, versão e links (LinkedIn, GitHub, email)
 - **PWA instalável**: manifest.json + ícones + service worker — funciona como
   app de verdade no celular/desktop, não só atalho
+- **Rate limiting** em login/cadastro/recuperação de senha: 5 tentativas com
+  falha por IP a cada 5 min (sucesso nunca bloqueia); frontend mostra
+  mensagem específica quando o bloqueio (HTTP 429) acontece
+- **Modal de confirmação ao excluir item** (substitui o `window.confirm`
+  nativo) — reduz exclusão acidental por toque no celular
+- **Importação de nota fiscal (Fase 1 — XML da NF-e)**: upload do XML, tela
+  de conferência (Encontrado/Novo item, com opção de associar manualmente),
+  e confirmação que soma quantidade ou cadastra item novo em lote
 - Código comentado, com cuidados de acessibilidade (labels, foco visível,
   aria-live, aria-modal) e performance (sem fontes externas, sem libs de UI pesadas)
 
@@ -64,9 +73,10 @@ App controle de estoque/
 - Chave JWT de produção gerada separadamente da chave de desenvolvimento
 
 ## Pendências conhecidas
-- Ícones de editar/excluir na tabela ficam com rolagem lateral em telas de
-  celular muito estreitas — funcional, mas vale revisar o layout responsivo
 - Publicação na Play Store (provavelmente via TWA — Trusted Web Activity —
   reaproveitando o manifest.json e o HTTPS já configurados)
-- Revisar rate limiting no login/cadastro antes de divulgar amplamente (evitar
-  força bruta), já que o app agora aceita público externo
+- Importação de nota fiscal — Fase 2 (PDF da DANFE) e Fase 3 (foto/OCR,
+  exige serviço de OCR pago ou self-hosted com menor precisão)
+- Avaliar se o rate limiting por IP (não por conta) causa fricção real no
+  uso — hoje, várias contas na mesma rede/IP podem ser bloqueadas juntas se
+  uma errar demais

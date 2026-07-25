@@ -14,9 +14,6 @@ import (
 
 func main() {
 	// Carrega variáveis de ambiente do .env (ex: JWT_SECRET) antes de qualquer outra coisa.
-	// Em produção (Docker), as variáveis já vêm do docker-compose.yml e o .env não existe
-	// dentro do container — godotenv.Load() simplesmente não encontra o arquivo e segue
-	// em frente sem erro, então essa chamada é segura nos dois cenários.
 	godotenv.Load()
 
 	database.Conectar()
@@ -27,11 +24,13 @@ func main() {
 		w.Write([]byte("ok"))
 	})
 
-	// Autenticação e recuperação de senha (não exigem token — a pessoa ainda não está logada).
-	mux.HandleFunc("POST /cadastro", handlers.Cadastrar)
-	mux.HandleFunc("POST /login", handlers.Login)
+	// Autenticação e recuperação de senha (não exigem token). Login e cadastro passam
+	// por LimitarTentativas: 5 tentativas com falha por IP a cada 5 min — login/cadastro
+	// certos nunca são bloqueados, só sequências de erro.
+	mux.HandleFunc("POST /cadastro", middleware.LimitarTentativas(handlers.Cadastrar))
+	mux.HandleFunc("POST /login", middleware.LimitarTentativas(handlers.Login))
 	mux.HandleFunc("GET /recuperar-senha/pergunta", handlers.ObterPerguntaSeguranca)
-	mux.HandleFunc("POST /recuperar-senha", handlers.RedefinirSenha)
+	mux.HandleFunc("POST /recuperar-senha", middleware.LimitarTentativas(handlers.RedefinirSenha))
 
 	// Itens (todas exigem token válido via middleware.Autenticar).
 	mux.HandleFunc("GET /itens", middleware.Autenticar(handlers.ListarItens))
@@ -40,6 +39,10 @@ func main() {
 	mux.HandleFunc("DELETE /itens/{id}", middleware.Autenticar(handlers.ExcluirItem))
 	mux.HandleFunc("POST /itens/{id}/retirar", middleware.Autenticar(handlers.RetirarItem))
 	mux.HandleFunc("GET /itens/estoque-baixo", middleware.Autenticar(handlers.ItensEstoqueBaixo))
+
+	// Importação de nota fiscal (Fase 1 — XML da NF-e). Ambas exigem login.
+	mux.HandleFunc("POST /notas-fiscais/importar", middleware.Autenticar(handlers.ImportarNotaFiscal))
+	mux.HandleFunc("POST /notas-fiscais/confirmar", middleware.Autenticar(handlers.ConfirmarImportacao))
 
 	log.Println("servidor rodando na porta 8080")
 	if err := http.ListenAndServe(":8080", corsMiddleware(mux)); err != nil {

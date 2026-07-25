@@ -71,11 +71,15 @@ export default function Login() {
       }
       navegar("/");
     } catch (e) {
-      setErro(
-        modo === MODOS.CADASTRO
-          ? "Não foi possível criar a conta. O nome de usuário já pode estar em uso."
-          : "Usuário ou senha inválidos."
-      );
+      if (e.status === 429) {
+        setErro("Muitas tentativas seguidas. Aguarde alguns minutos antes de tentar de novo.");
+      } else {
+        setErro(
+          modo === MODOS.CADASTRO
+            ? "Não foi possível criar a conta. O nome de usuário já pode estar em uso."
+            : "Usuário ou senha inválidos."
+        );
+      }
     } finally {
       setCarregando(false);
     }
@@ -112,7 +116,11 @@ export default function Login() {
       irParaModo(MODOS.ENTRAR);
       setSucesso("Senha redefinida! Já pode entrar com a nova senha.");
     } catch (e) {
-      setErro("Resposta de segurança incorreta.");
+      if (e.status === 429) {
+        setErro("Muitas tentativas seguidas. Aguarde alguns minutos antes de tentar de novo.");
+      } else {
+        setErro("Resposta de segurança incorreta.");
+      }
     } finally {
       setCarregando(false);
     }

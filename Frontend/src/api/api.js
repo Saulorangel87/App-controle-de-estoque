@@ -30,7 +30,12 @@ async function requisitar(caminho, opcoes = {}, token = null) {
   // O backend responde erros como texto simples (http.Error), não JSON.
   if (!resposta.ok) {
     const textoErro = await resposta.text();
-    throw new Error(textoErro || "Erro na requisição");
+    // Anexa o status ao erro (não só a mensagem) — quem chamar essa função
+    // consegue diferenciar, por exemplo, "senha errada" (401) de "bloqueado
+    // por excesso de tentativas" (429), que precisam de mensagens diferentes.
+    const erro = new Error(textoErro || "Erro na requisição");
+    erro.status = resposta.status;
+    throw erro;
   }
 
   // Respostas 204 (excluir item) não têm corpo — não tenta fazer parse de JSON vazio.
@@ -109,6 +114,39 @@ export function retirarItem(id, quantidade, token) {
   return requisitar(
     `/itens/${id}/retirar`,
     { method: "POST", body: JSON.stringify({ quantidade }) },
+    token
+  );
+}
+
+// ---------- Importação de nota fiscal ----------
+
+// Não reaproveita requisitar() porque upload de arquivo precisa de
+// multipart/form-data — o navegador define esse Content-Type (com o
+// "boundary" correto) sozinho quando NÃO especificamos um manualmente.
+export async function importarNotaFiscal(arquivo, token) {
+  const formData = new FormData();
+  formData.append("arquivo", arquivo);
+
+  const resposta = await fetch(`${URL_BASE}/notas-fiscais/importar`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
+
+  if (!resposta.ok) {
+    const textoErro = await resposta.text();
+    const erro = new Error(textoErro || "Erro na requisição");
+    erro.status = resposta.status;
+    throw erro;
+  }
+
+  return resposta.json();
+}
+
+export function confirmarImportacaoNota(entradas, token) {
+  return requisitar(
+    "/notas-fiscais/confirmar",
+    { method: "POST", body: JSON.stringify(entradas) },
     token
   );
 }
