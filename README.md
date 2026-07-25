@@ -110,3 +110,9 @@ Detalhes completos em `NOTAS-DEPLOY.md` na raiz do projeto.
   responsivo dessa linha da tabela em algum momento.
 - Planejado: publicação na Play Store (provavelmente via TWA, aproveitando o
   manifest.json e o HTTPS que já existem).
+
+## 📄 Licença
+
+Este projeto está licenciado sob a licença MIT.
+
+Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
