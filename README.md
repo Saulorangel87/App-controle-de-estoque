@@ -8,8 +8,9 @@ Projeto desenvolvido com separação entre **Frontend** e **Backend**, utilizand
 
 Acesse a aplicação:
 
-🔗 [Projeto no ar, acesse aqui](https://estoque.devsaulo.com.br)
-
+<a href="https://estoque.devsaulo.com.br" target="_blank">
+🔗 Projeto no ar, acesse aqui
+</a>
 ---
 
 ## 🚀 Tecnologias utilizadas
