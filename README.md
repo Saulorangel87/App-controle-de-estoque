@@ -4,6 +4,11 @@ Aplicação web completa para gerenciamento de estoque doméstico ou empresarial
 
 Projeto desenvolvido com separação entre **Frontend** e **Backend**, utilizando uma API própria e banco SQLite.
 
+<img width="1897" height="847" alt="image" src="https://github.com/user-attachments/assets/269d17dd-713f-4899-a94c-4c39be087ce2" />
+<img width="1366" height="857" alt="image" src="https://github.com/user-attachments/assets/9bccd837-9321-4ecd-8d3b-71b87a93ad66" />
+
+
+
 ## 🔗 Projeto no ar
 
 Acesse a aplicação:
