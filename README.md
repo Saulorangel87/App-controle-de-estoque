@@ -1,60 +1,314 @@
-# Controle de Estoque — Frontend
+# 📦 Controle de Estoque
 
-Interface em React + Vite para o app de controle de estoque de mantimentos de casa.
+Aplicação web completa para gerenciamento de estoque doméstico ou empresarial, permitindo cadastro de usuários, autenticação segura e controle de itens com alertas de estoque baixo.
 
-## Como rodar
+Projeto desenvolvido com separação entre **Frontend** e **Backend**, utilizando uma API própria e banco SQLite.
+
+---
+
+## 🚀 Tecnologias utilizadas
+
+### Backend
+- Go
+- `net/http` (API REST sem frameworks)
+- SQLite
+- `modernc.org/sqlite`
+- JWT para autenticação
+- bcrypt para criptografia de senhas
+
+### Frontend
+- React 19
+- Vite
+- React Router DOM
+- CSS puro
+- Context API
+- LocalStorage para persistência de preferências
+
+### Deploy
+- Docker
+- Docker Compose
+- Nginx
+- Oracle Cloud
+- Cloudflare Tunnel
+
+---
+
+# 📁 Estrutura do projeto
 
 ```
+App-controle-de-estoque/
+│
+├── docker-compose.yml
+├── Backend.Dockerfile
+├── Frontend.Dockerfile
+├── nginx.conf
+├── .gitignore
+│
+├── Backend/
+│   ├── main.go
+│   ├── config/
+│   ├── database/
+│   ├── models/
+│   ├── handlers/
+│   └── middleware/
+│
+└── Frontend/
+    ├── src/
+    │   ├── api/
+    │   ├── components/
+    │   ├── context/
+    │   ├── pages/
+    │   └── utils/
+    │
+    └── public/
+```
+
+---
+
+# ✨ Funcionalidades
+
+## 🔐 Autenticação
+- Cadastro de usuários
+- Login com JWT
+- Senhas protegidas com bcrypt
+- Recuperação de senha através de pergunta de segurança
+- Controle de sessão utilizando token JWT
+
+---
+
+## 📦 Controle de estoque
+
+- Cadastro de produtos
+- Listagem de itens
+- Edição de produtos
+- Exclusão de produtos
+- Retirada de estoque (baixa automática)
+- Controle de quantidade
+- Definição de estoque mínimo
+
+---
+
+## 📊 Dashboard
+
+- Total de itens cadastrados
+- Quantidade de produtos em estoque baixo
+- Locais utilizados
+- Indicadores rápidos do estoque
+
+---
+
+## 🔎 Busca e filtros
+
+- Pesquisa por nome
+- Filtro por localização:
+
+  - Despensa
+  - Geladeira
+  - Freezer
+  - Armário
+
+---
+
+## 🎨 Interface
+
+- Tema claro e escuro
+- Preferência salva no navegador
+- Layout responsivo
+- Componentes reutilizáveis
+- Feedback visual para ações do usuário
+
+---
+
+# ♿ Boas práticas aplicadas
+
+- Labels associados aos campos
+- Foco visível para navegação
+- Uso de `aria-live`
+- Uso de `aria-modal`
+- Código organizado por responsabilidade
+- Sem dependência de bibliotecas pesadas de UI
+
+---
+
+# 🛠️ Executando localmente
+
+## Pré-requisitos
+
+Instale:
+
+- Go
+- Node.js
+- Docker (opcional)
+
+---
+
+## Backend
+
+Entre na pasta:
+
+```bash
+cd Backend
+```
+
+Configure as variáveis de ambiente criando um arquivo:
+
+```
+.env
+```
+
+Exemplo:
+
+```env
+JWT_SECRET=sua_chave_secreta
+DB_PATH=estoque.db
+```
+
+Execute:
+
+```bash
+go run main.go
+```
+
+O backend ficará disponível na porta configurada.
+
+---
+
+## Frontend
+
+Entre na pasta:
+
+```bash
+cd Frontend
+```
+
+Instale as dependências:
+
+```bash
 npm install
+```
+
+Configure:
+
+```
+.env
+```
+
+Exemplo:
+
+```env
+VITE_API_URL=http://localhost:8090
+```
+
+Execute:
+
+```bash
 npm run dev
 ```
 
-O Vite sobe em `http://localhost:5173` por padrão. O backend em Go precisa estar
-rodando em `http://localhost:8080` ao mesmo tempo (o CORS do backend já está
-liberado especificamente para `http://localhost:5173`).
+---
 
-## Estrutura
+# 🐳 Executando com Docker
 
-```
-src/
-├── api/api.js                 → todas as chamadas à API centralizadas aqui
-├── context/AuthContext.jsx    → guarda o token JWT (localStorage) e expõe entrar()/sair()
-├── components/
-│   ├── RotaProtegida.jsx      → redireciona para /login se não houver token
-│   ├── CartoesResumo.jsx      → cards do dashboard (total, estoque baixo, locais)
-│   ├── BarraFiltros.jsx       → busca por nome + filtro por localização
-│   ├── TabelaItens.jsx        → lista os itens com ações de editar/excluir/retirar
-│   ├── ModalFormularioItem.jsx→ modal único usado tanto para adicionar quanto editar
-│   └── ModalRetirar.jsx       → modal para dar baixa em uma quantidade consumida
-└── pages/
-    ├── Login.jsx               → login e cadastro na mesma tela (alterna o modo)
-    └── Dashboard.jsx            → tela principal, junta tudo acima
+O projeto possui configuração para execução utilizando Docker Compose.
+
+Subir os containers:
+
+```bash
+docker compose up -d --build
 ```
 
-## Decisões de performance, acessibilidade e SEO
+Verificar containers:
 
-- **Sem fontes externas**: usa a pilha de fontes do sistema operacional
-  (`-apple-system, "Segoe UI", Roboto...`), eliminando uma requisição de rede
-  e evitando atraso/flash de texto — ajuda diretamente o LCP e o CLS.
-- **Sem bibliotecas de UI pesadas**: CSS puro em `index.css`, com variáveis para
-  cor/espaçamento. Menos JavaScript para baixar e interpretar.
-- **`build.target: "es2020"`** no `vite.config.js`: gera menos código de
-  compatibilidade para navegadores antigos, reduzindo o tamanho do bundle final.
-- **Foco de teclado sempre visível** (`:focus-visible` no CSS) — nunca é removido.
-- **Labels associados a todo input** (`htmlFor`/`id`), inclusive nos filtros
-  (com `sr-only` quando o rótulo visível seria redundante com o placeholder).
-- **`aria-live="polite"`** na área da tabela, para leitores de tela perceberem
-  quando a lista termina de carregar.
-- **`role="dialog"` + `aria-modal`** nos modais, e foco automático no primeiro
-  campo ao abrir.
-- **`prefers-reduced-motion`** respeitado no CSS global.
-- **`meta name="robots" content="noindex"`** no `index.html`: é um app pessoal
-  autenticado, não faz sentido para buscadores indexarem — mas o `title` e a
-  `meta description` continuam corretos para quando o link for compartilhado.
+```bash
+docker ps
+```
 
-## Pendências conhecidas
+Visualizar logs:
 
-- Trocar a URL fixa do backend em `src/api/api.js` por uma variável de ambiente
-  do Vite (`import.meta.env.VITE_API_URL`) antes de qualquer deploy em produção.
-- Ajustar a origem liberada no CORS do backend (`corsMiddleware` em `main.go`)
-  para o domínio real quando o frontend for publicado.
+```bash
+docker compose logs -f
+```
+
+---
+
+# 🌎 Deploy
+
+A aplicação foi preparada para deploy utilizando:
+
+- Docker Compose
+- Backend Go
+- Frontend React servido pelo Nginx
+- Cloudflare Tunnel para exposição segura
+
+Arquitetura:
+
+```
+Usuário
+   |
+   |
+Cloudflare Tunnel
+   |
+   |
+Nginx
+   |
+   |
+---------------------
+|                   |
+Frontend          Backend
+React             Go API
+                   |
+                 SQLite
+```
+
+---
+
+# 🔒 Arquivos ignorados
+
+Arquivos sensíveis não fazem parte do repositório:
+
+```
+Backend/.env
+Backend/estoque.db
+
+Frontend/node_modules
+Frontend/dist
+Frontend/.env
+
+data/
+```
+
+O banco de dados de produção permanece somente no ambiente do servidor.
+
+---
+
+# 📌 Próximas melhorias
+
+- Melhorar responsividade dos botões de ação na tabela mobile
+- Implementar testes automatizados
+- Adicionar histórico de movimentações do estoque
+- Criar relatórios de consumo
+- Migrar SQLite para PostgreSQL em ambientes maiores
+
+---
+
+# 👨‍💻 Autor
+
+**Saulo Rangel**
+
+Projeto desenvolvido como parte do processo de aprendizado em desenvolvimento Full Stack.
+
+Tecnologias estudadas e aplicadas:
+
+- React
+- JavaScript
+- Go
+- APIs REST
+- Docker
+- Banco de dados
+- Deploy em ambiente Linux
+
+---
+
+## 📄 Versão
+
+`v1.0.0`
