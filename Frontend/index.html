@@ -4,14 +4,6 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="icon" type="image/png" href="/logo.png" />
-
-    <!-- Manifesto PWA: nome, ícones e display "standalone" são o que faz o
-         Chrome oferecer "Instalar app" de forma confiável. -->
-    <link rel="manifest" href="/manifest.json" />
-    <!-- iOS/Safari não lê manifest.json para o ícone da tela inicial — precisa
-         desse link específico. -->
-    <link rel="apple-touch-icon" href="/icon-192.png" />
 
     <!-- SEO básico: título e descrição únicos, usados por buscadores e ao compartilhar o link -->
     <title>Controle de Estoque | Mantimentos de casa</title>
@@ -19,8 +11,9 @@
       name="description"
       content="Controle o estoque de mantimentos da sua casa: cadastre itens, dê baixa no consumo e receba alertas quando algo estiver acabando."
     />
-    <meta name="robots" content="noindex" />
-    <!-- noindex: é um app pessoal, autenticado; não faz sentido indexar nos buscadores -->
+    <meta name="robots" content="index, follow" />
+    <!-- App agora é público (v1.1.0) — antes era noindex por ser só uso pessoal -->
+    <link rel="canonical" href="https://estoque.devsaulo.com.br/" />
 
     <!-- theme-color melhora a experiência em navegadores mobile (barra de status combinando com o app) -->
     <meta name="theme-color" content="#0f9d6b" />

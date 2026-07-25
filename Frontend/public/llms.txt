@@ -1,0 +1,13 @@
+# Controle de Estoque
+
+> Aplicativo web para controle de estoque de mantimentos domésticos: cadastro de itens com quantidade e unidade, controle por localização (Despensa, Geladeira, Freezer, Armário), baixa de consumo e alertas automáticos de estoque baixo.
+
+Requer criação de conta (usuário e senha) para uso — não há conteúdo público além da tela de entrada. Cada conta tem seu próprio estoque, isolado dos demais usuários.
+
+## Páginas
+
+- [Entrar / Criar conta](https://estoque.devsaulo.com.br/login): Ponto de entrada do aplicativo — login ou cadastro de nova conta.
+
+## Optional
+
+- [Repositório no GitHub](https://github.com/Saulorangel87/App-controle-de-estoque): Código-fonte do projeto.
