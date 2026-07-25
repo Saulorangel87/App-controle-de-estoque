@@ -1,323 +1,108 @@
-# 📦 Controle de Estoque
+# Controle de Estoque — Frontend
 
-Aplicação web completa para gerenciamento de estoque doméstico ou empresarial, permitindo cadastro de usuários, autenticação segura e controle de itens com alertas de estoque baixo.
+Interface em React + Vite para o app de controle de estoque de mantimentos de casa.
 
-Projeto desenvolvido com separação entre **Frontend** e **Backend**, utilizando uma API própria e banco SQLite.
+Em produção: **https://estoque.devsaulo.com.br**
 
-<img width="1897" height="847" alt="image" src="https://github.com/user-attachments/assets/269d17dd-713f-4899-a94c-4c39be087ce2" />
-<img width="1366" height="857" alt="image" src="https://github.com/user-attachments/assets/9bccd837-9321-4ecd-8d3b-71b87a93ad66" />
+## Instalável como app (PWA)
 
+O app pode ser instalado no celular ou no computador como um aplicativo de
+verdade, sem barra de endereço — não é só um atalho.
 
+**Como instalar (Android/Chrome):** acesse o site, abra o menu (⋮) do
+navegador e toque em **"Instalar app"**. No desktop, o Chrome mostra um ícone
+de instalação (⊕) do lado direito da barra de endereço.
 
-## 🔗 Projeto no ar
+**Como instalar (iOS/Safari):** toque no ícone de compartilhar e escolha
+**"Adicionar à Tela de Início"**.
 
-Acesse a aplicação:
+Isso funciona por causa de três peças em `public/`:
 
-🔗 [Projeto no ar, acesse aqui](https://estoque.devsaulo.com.br)
+- **`manifest.json`** — nome, cores e ícones do app; é o que faz o navegador
+  reconhecer a página como instalável de verdade (não só um atalho)
+- **`icon-192.png` e `icon-512.png`** — ícones em duas resoluções, exigidos
+  pelo manifesto
+- **`sw.js`** — service worker mínimo, registrado em `src/main.jsx`; cacheia o
+  "shell" do app para abrir mais rápido numa segunda visita (nunca cacheia
+  dados da API, só os arquivos estáticos do próprio frontend)
 
-## 🚀 Tecnologias utilizadas
-
-### Backend
-- Go
-- `net/http` (API REST sem frameworks)
-- SQLite
-- `modernc.org/sqlite`
-- JWT para autenticação
-- bcrypt para criptografia de senhas
-
-### Frontend
-- React 19
-- Vite
-- React Router DOM
-- CSS puro
-- Context API
-- LocalStorage para persistência de preferências
-
-### Deploy
-- Docker
-- Docker Compose
-- Nginx
-- Oracle Cloud
-- Cloudflare Tunnel
-
----
-
-# 📁 Estrutura do projeto
+## Como rodar localmente
 
 ```
-App-controle-de-estoque/
-│
-├── docker-compose.yml
-├── Backend.Dockerfile
-├── Frontend.Dockerfile
-├── nginx.conf
-├── .gitignore
-│
-├── Backend/
-│   ├── main.go
-│   ├── config/
-│   ├── database/
-│   ├── models/
-│   ├── handlers/
-│   └── middleware/
-│
-└── Frontend/
-    ├── src/
-    │   ├── api/
-    │   ├── components/
-    │   ├── context/
-    │   ├── pages/
-    │   └── utils/
-    │
-    └── public/
-```
-
----
-
-# ✨ Funcionalidades
-
-## 🔐 Autenticação
-- Cadastro de usuários
-- Login com JWT
-- Senhas protegidas com bcrypt
-- Recuperação de senha através de pergunta de segurança
-- Controle de sessão utilizando token JWT
-
----
-
-## 📦 Controle de estoque
-
-- Cadastro de produtos
-- Listagem de itens
-- Edição de produtos
-- Exclusão de produtos
-- Retirada de estoque (baixa automática)
-- Controle de quantidade
-- Definição de estoque mínimo
-
----
-
-## 📊 Dashboard
-
-- Total de itens cadastrados
-- Quantidade de produtos em estoque baixo
-- Locais utilizados
-- Indicadores rápidos do estoque
-
----
-
-## 🔎 Busca e filtros
-
-- Pesquisa por nome
-- Filtro por localização:
-
-  - Despensa
-  - Geladeira
-  - Freezer
-  - Armário
-
----
-
-## 🎨 Interface
-
-- Tema claro e escuro
-- Preferência salva no navegador
-- Layout responsivo
-- Componentes reutilizáveis
-- Feedback visual para ações do usuário
-
----
-
-# ♿ Boas práticas aplicadas
-
-- Labels associados aos campos
-- Foco visível para navegação
-- Uso de `aria-live`
-- Uso de `aria-modal`
-- Código organizado por responsabilidade
-- Sem dependência de bibliotecas pesadas de UI
-
----
-
-# 🛠️ Executando localmente
-
-## Pré-requisitos
-
-Instale:
-
-- Go
-- Node.js
-- Docker (opcional)
-
----
-
-## Backend
-
-Entre na pasta:
-
-```bash
-cd Backend
-```
-
-Configure as variáveis de ambiente criando um arquivo:
-
-```
-.env
-```
-
-Exemplo:
-
-```env
-JWT_SECRET=sua_chave_secreta
-DB_PATH=estoque.db
-```
-
-Execute:
-
-```bash
-go run main.go
-```
-
-O backend ficará disponível na porta configurada.
-
----
-
-## Frontend
-
-Entre na pasta:
-
-```bash
-cd Frontend
-```
-
-Instale as dependências:
-
-```bash
 npm install
-```
-
-Configure:
-
-```
-.env
-```
-
-Exemplo:
-
-```env
-VITE_API_URL=http://localhost:8090
-```
-
-Execute:
-
-```bash
 npm run dev
 ```
 
----
+O Vite sobe em `http://localhost:5173` por padrão. O backend em Go precisa estar
+rodando em `http://localhost:8080` ao mesmo tempo (o CORS do backend já está
+liberado especificamente para `http://localhost:5173`).
 
-# 🐳 Executando com Docker
+> Service worker só funciona em `localhost` ou em produção (HTTPS) — em outro
+> IP da rede local sem HTTPS, o navegador bloqueia o registro por segurança.
 
-O projeto possui configuração para execução utilizando Docker Compose.
-
-Subir os containers:
-
-```bash
-docker compose up -d --build
-```
-
-Verificar containers:
-
-```bash
-docker ps
-```
-
-Visualizar logs:
-
-```bash
-docker compose logs -f
-```
-
----
-
-# 🌎 Deploy
-
-A aplicação foi preparada para deploy utilizando:
-
-- Docker Compose
-- Backend Go
-- Frontend React servido pelo Nginx
-- Cloudflare Tunnel para exposição segura
-
-Arquitetura:
+## Estrutura
 
 ```
-Usuário
-   |
-   |
-Cloudflare Tunnel
-   |
-   |
-Nginx
-   |
-   |
----------------------
-|                   |
-Frontend          Backend
-React             Go API
-                   |
-                 SQLite
+src/
+├── api/api.js                  → todas as chamadas à API centralizadas aqui
+├── context/
+│   ├── AuthContext.jsx          → guarda o token JWT (localStorage), expõe nome/entrar()/sair()
+│   └── ThemeContext.jsx         → tema claro/escuro, persistido em localStorage
+├── utils/
+│   ├── jwt.js                    → decodifica o payload do JWT no navegador
+│   └── perguntasSeguranca.js     → lista de perguntas de segurança do cadastro
+├── components/
+│   ├── RotaProtegida.jsx        → redireciona para /login se não houver token
+│   ├── CartoesResumo.jsx        → cards do dashboard (total, estoque baixo, locais)
+│   ├── BarraFiltros.jsx         → busca por nome, filtro por localização e por estoque baixo
+│   ├── TabelaItens.jsx          → lista os itens com ações de editar/excluir/retirar
+│   ├── ModalFormularioItem.jsx  → modal único usado tanto para adicionar quanto editar
+│   ├── ModalRetirar.jsx         → modal para dar baixa em uma quantidade consumida
+│   └── Footer.jsx               → rodapé fixo com créditos, versão e links
+└── pages/
+    ├── Login.jsx                 → login, cadastro e recuperação de senha (pergunta de segurança)
+    └── Dashboard.jsx             → tela principal, junta tudo acima
+
+public/
+├── manifest.json, sw.js, icon-192.png, icon-512.png  → PWA (ver seção acima)
+├── robots.txt                   → libera rastreamento (app é público desde a v1.1.0)
+└── llms.txt                     → resumo do site para agentes de IA (spec llmstxt.org)
 ```
 
----
+## Decisões de performance, acessibilidade e SEO
 
-# 🔒 Arquivos ignorados
+- **Sem fontes externas**: usa a pilha de fontes do sistema operacional
+  (`-apple-system, "Segoe UI", Roboto...`), eliminando uma requisição de rede
+  e evitando atraso/flash de texto — ajuda diretamente o LCP e o CLS.
+- **Sem bibliotecas de UI pesadas**: CSS puro em `index.css`, com variáveis para
+  cor/espaçamento (inclusive tema claro/escuro). Menos JavaScript para baixar.
+- **`build.target: "es2020"`** no `vite.config.js`: gera menos código de
+  compatibilidade para navegadores antigos, reduzindo o tamanho do bundle final.
+- **Foco de teclado sempre visível** (`:focus-visible` no CSS) — nunca é removido.
+- **Labels associados a todo input** (`htmlFor`/`id`), inclusive nos filtros
+  (com `sr-only` quando o rótulo visível seria redundante com o placeholder).
+- **`aria-live="polite"`** na área da tabela, **`role="dialog"` + `aria-modal`**
+  nos modais com foco automático no primeiro campo, **`prefers-reduced-motion`**
+  respeitado no CSS global.
+- **SEO público**: `meta robots` em `index, follow` (o app é público desde a
+  v1.1.0), `link rel="canonical"` apontando para o domínio real, `robots.txt`
+  liberando rastreamento, e `llms.txt` seguindo a especificação llmstxt.org
+  para a auditoria experimental de Navegação Agêntica do Lighthouse.
 
-Arquivos sensíveis não fazem parte do repositório:
+Última medição no PageSpeed Insights: Desempenho 98, Acessibilidade 95,
+Práticas recomendadas 100, SEO 100, Navegação agêntica 3/3.
 
-```
-Backend/.env
-Backend/estoque.db
+## Deploy
 
-Frontend/node_modules
-Frontend/dist
-Frontend/.env
+Produção roda via Docker Compose no Oracle Cloud (Backend na porta 8090,
+Frontend com nginx na 8091), atrás de Cloudflare Tunnel, nos domínios
+`estoque.devsaulo.com.br` (frontend) e `estoque-api.devsaulo.com.br` (backend).
+Detalhes completos em `NOTAS-DEPLOY.md` na raiz do projeto.
 
-data/
-```
+## Pendências conhecidas
 
-O banco de dados de produção permanece somente no ambiente do servidor.
-
----
-
-# 📌 Próximas melhorias
-
-- Melhorar responsividade dos botões de ação na tabela mobile
-- Implementar testes automatizados
-- Adicionar histórico de movimentações do estoque
-- Criar relatórios de consumo
-- Migrar SQLite para PostgreSQL em ambientes maiores
-
----
-
-# 👨‍💻 Autor
-
-**Saulo Rangel**
-
-Projeto desenvolvido como parte do processo de aprendizado em desenvolvimento Full Stack.
-
-Tecnologias estudadas e aplicadas:
-
-- React
-- JavaScript
-- Go
-- APIs REST
-- Docker
-- Banco de dados
-- Deploy em ambiente Linux
-
----
-
-## 📄 Versão
-
-`v1.0.0`
+- Ícones de editar/excluir na tabela de itens ficam com rolagem lateral em
+  telas de celular muito estreitas — funcional, mas vale revisar o layout
+  responsivo dessa linha da tabela em algum momento.
+- Planejado: publicação na Play Store (provavelmente via TWA, aproveitando o
+  manifest.json e o HTTPS que já existem).
