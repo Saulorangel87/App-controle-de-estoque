@@ -4,6 +4,12 @@ Aplicação web completa para gerenciamento de estoque doméstico ou empresarial
 
 Projeto desenvolvido com separação entre **Frontend** e **Backend**, utilizando uma API própria e banco SQLite.
 
+## 🔗 Projeto no ar
+
+Acesse a aplicação:
+
+🔗 [Projeto no ar, acesse aqui](https://estoque.devsaulo.com.br)
+
 ---
 
 ## 🚀 Tecnologias utilizadas
