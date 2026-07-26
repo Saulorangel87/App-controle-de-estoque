@@ -160,7 +160,6 @@ func rodarOCR(imagemProcessada []byte) (string, error) {
 	// "--psm 6": trata a imagem como um bloco uniforme de texto — funciona
 	// melhor pra telas/listas como essa do que o modo automático padrão,
 	// que é pensado pra páginas de documento com parágrafos "de verdade".
-<<<<<<< HEAD
 	// "--dpi 300": screenshots normalmente não têm informação de DPI
 	// embutida, e sem isso o Tesseract às vezes assume uma resolução baixa
 	// e piora a leitura de números pequenos — forçar 300 evita essa
@@ -170,12 +169,6 @@ func rodarOCR(imagemProcessada []byte) (string, error) {
 	saida, err := exec.Command(
 		"tesseract", arquivoTemp.Name(), "stdout",
 		"-l", "por", "--psm", "6", "--dpi", "300",
-=======
-	// "stdout": manda o texto reconhecido direto pra saída padrão, sem
-	// precisar gerenciar mais um arquivo temporário de resultado.
-	saida, err := exec.Command(
-		"tesseract", arquivoTemp.Name(), "stdout", "-l", "por", "--psm", "6",
->>>>>>> 774d74c6f21a1477a584a0d74f8b14f40344279e
 	).Output()
 	if err != nil {
 		return "", fmt.Errorf("%w: %v", ErrOCRFalhou, err)
@@ -184,7 +177,6 @@ func rodarOCR(imagemProcessada []byte) (string, error) {
 	return string(saida), nil
 }
 
-<<<<<<< HEAD
 // rotacionar90 gira a imagem em incrementos de 90° no sentido horário.
 // "vezes" pode ser 0 (sem rotação), 1 (90°), 2 (180°) ou 3 (270°) — usado
 // pra testar todas as orientações possíveis de uma foto tirada com celular
@@ -257,8 +249,6 @@ func prepararImagemParaOCR(imagemDecodificada image.Image) ([]byte, error) {
 	return buffer.Bytes(), nil
 }
 
-=======
->>>>>>> 774d74c6f21a1477a584a0d74f8b14f40344279e
 // padraoNomeCodigo casa linhas como "LEITE INTEGRAL GODAM (Código: 22080 )".
 // (?m) trata cada linha do texto separadamente. Aceita pequenas variações
 // que o OCR costuma introduzir na palavra "Código" (0 no lugar do O, etc.)
@@ -268,7 +258,6 @@ var padraoNomeCodigo = regexp.MustCompile(`(?m)^(.+?)\s*\(C[oó0]digo:?\s*(\d+)\
 // padraoQuantidade casa trechos como "Qtde.:1 UN: UN Vl. Unit.: 5,89" — os
 // rótulos ("Qtde", "UN", "Vl. Unit") são fixos no template da SEFAZ, então
 // são um ponto de ancoragem confiável mesmo se a pontuação ao redor variar
-<<<<<<< HEAD
 // um pouco por causa de ruído do OCR. O [VW][l1I] aceita "Vl", "V1", "VI"
 // ou "WI" — testando contra notas reais, o Tesseract já leu "Vl." tanto como
 // "VI." (confunde "l" minúsculo com "I" maiúsculo) quanto como "WI." (W no
@@ -337,34 +326,14 @@ func interpretarTextoOCR(texto string) []models.ProdXML {
 // aparição é mais confiável do que tentar casar tudo numa regex só, já que
 // o OCR quebra linha de forma imprevisível dependendo da imagem.
 func interpretarFormatoTelaSefaz(texto string) []models.ProdXML {
-=======
-// um pouco por causa de ruído do OCR.
-var padraoQuantidade = regexp.MustCompile(
-	`(?mi)Qtde\.?:?\s*([\d.,]+)\s+UN:?\s*(\S+)\s+Vl\.?\s*Unit\.?:?\s*([\d.,]+)`,
-)
-
-// interpretarTextoOCR casa cada "nome + código" (na ordem em que aparecem
-// no texto) com a "quantidade + unidade + valor" correspondente (também na
-// ordem em que aparecem) — o template da SEFAZ sempre intercala essas duas
-// linhas por item, então parear PELA ORDEM de aparição é mais confiável do
-// que tentar casar tudo numa regex só, já que o OCR quebra linha de forma
-// imprevisível dependendo da imagem.
-func interpretarTextoOCR(texto string) []models.ProdXML {
->>>>>>> 774d74c6f21a1477a584a0d74f8b14f40344279e
 	nomes := padraoNomeCodigo.FindAllStringSubmatch(texto, -1)
 	quantidades := padraoQuantidade.FindAllStringSubmatch(texto, -1)
 
 	// Se as contagens não baterem, o OCR deve ter engolido ou duplicado
-<<<<<<< HEAD
 	// alguma linha — melhor devolver nada (interpretarTextoOCR cai pro
 	// formato de cupom de papel, e se esse também não achar nada, o
 	// handler cai no erro ErrOCRSemItens) do que arriscar parear um item
 	// com a quantidade errada silenciosamente.
-=======
-	// alguma linha — melhor devolver nada (o handler cai no erro
-	// ErrOCRSemItens, pedindo uma imagem mais nítida) do que arriscar
-	// parear um item com a quantidade errada silenciosamente.
->>>>>>> 774d74c6f21a1477a584a0d74f8b14f40344279e
 	if len(nomes) == 0 || len(nomes) != len(quantidades) {
 		return nil
 	}
@@ -376,7 +345,6 @@ func interpretarTextoOCR(texto string) []models.ProdXML {
 			continue
 		}
 
-<<<<<<< HEAD
 		quantidadeLida := strings.ReplaceAll(strings.TrimSpace(quantidades[i][1]), "?", "")
 		if quantidadeLida == "" {
 			// O dígito sumiu do OCR — assume 1 (o mais comum em compras),
@@ -387,11 +355,6 @@ func interpretarTextoOCR(texto string) []models.ProdXML {
 		produtos = append(produtos, models.ProdXML{
 			Nome:       nome,
 			Quantidade: paraNumeroDecimal(quantidadeLida),
-=======
-		produtos = append(produtos, models.ProdXML{
-			Nome:       nome,
-			Quantidade: paraNumeroDecimal(strings.TrimSpace(quantidades[i][1])),
->>>>>>> 774d74c6f21a1477a584a0d74f8b14f40344279e
 			Unidade:    normalizarUnidade(strings.TrimSpace(quantidades[i][2])),
 			ValorUnit:  paraNumeroDecimal(strings.TrimSpace(quantidades[i][3])),
 		})
@@ -399,7 +362,6 @@ func interpretarTextoOCR(texto string) []models.ProdXML {
 
 	return produtos
 }
-<<<<<<< HEAD
 
 // interpretarFormatoCupomPapel casa o formato de uma linha só usado no
 // cupom de papel impresso (ver padraoItemCupomPapel). Diferente do formato
@@ -464,5 +426,3 @@ func interpretarFormatoCupomComIndicadorImposto(texto string) []models.ProdXML {
 
 	return produtos
 }
-=======
->>>>>>> 774d74c6f21a1477a584a0d74f8b14f40344279e
