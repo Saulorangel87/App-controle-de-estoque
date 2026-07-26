@@ -1,23 +1,92 @@
 import { useState, useRef } from "react";
-import { importarNotaFiscal, confirmarImportacaoNota } from "../api/api.js";
+import {
+  importarNotaFiscal,
+  importarNotaFiscalPorFoto,
+  importarNotaFiscalPorQRCode,
+  confirmarImportacaoNota,
+} from "../api/api.js";
 import { LOCAIS } from "./BarraFiltros.jsx";
+import LeitorQRCode from "./LeitorQRCode.jsx";
 
-// Os 3 passos desse fluxo: escolher o arquivo, conferir os itens
-// interpretados (e ajustar o que a comparação automática não resolveu
-// sozinha), e um resumo final depois de aplicar.
+// Passos desse fluxo: escolher a forma de entrada, o passo específico de
+// cada uma, conferir os itens interpretados (e ajustar o que a comparação
+// automática não resolveu sozinha), e um resumo final depois de aplicar.
 const PASSOS = {
+  ESCOLHA: "escolha",
   UPLOAD: "upload",
+  FOTO: "foto",
+  QRCODE: "qrcode",
   REVISAO: "revisao",
   SUCESSO: "sucesso",
 };
 
 export default function ModalImportarNota({ token, itensEstoque, aoFechar, aoConcluir }) {
-  const [passo, setPasso] = useState(PASSOS.UPLOAD);
+  const [passo, setPasso] = useState(PASSOS.ESCOLHA);
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState("");
   const [itensRevisao, setItensRevisao] = useState([]);
   const [resumo, setResumo] = useState(null);
+  const [urlColada, setUrlColada] = useState("");
+  const [usarCamera, setUsarCamera] = useState(true);
   const inputArquivoRef = useRef(null);
+  const inputFotoRef = useRef(null);
+
+
+  // Transforma a prévia recebida do backend (mesmo formato pros dois
+  // fluxos) em itens editáveis pra tela de revisão — reaproveitado tanto
+  // pelo upload de XML quanto pela leitura de QR Code.
+  function prepararItensParaRevisao(previa) {
+    return previa.map((item) => ({
+      ...item,
+      nomeFinal: item.nome_nota,
+      local: LOCAIS[1],
+      estoqueMinimo: 0,
+    }));
+  }
+
+  async function aoEnviarFoto(evento) {
+    evento.preventDefault();
+    const arquivo = inputFotoRef.current?.files?.[0];
+    if (!arquivo) {
+      setErro("Selecione a foto ou print da nota.");
+      return;
+    }
+
+    setErro("");
+    setCarregando(true);
+    try {
+      const previa = await importarNotaFiscalPorFoto(arquivo, token);
+      setItensRevisao(prepararItensParaRevisao(previa));
+      setPasso(PASSOS.REVISAO);
+    } catch (e) {
+      setErro(
+        e.message ||
+          "Não foi possível ler essa imagem. Tente uma foto/print mais nítido, ou envie o XML."
+      );
+    } finally {
+      setCarregando(false);
+    }
+  }
+
+  async function aoProcessarQRCode(urlNota) {
+    const url = urlNota.trim();
+    if (!url) {
+      setErro("Cole ou escaneie o link do QR Code da nota.");
+      return;
+    }
+
+    setErro("");
+    setCarregando(true);
+    try {
+      const previa = await importarNotaFiscalPorQRCode(url, token);
+      setItensRevisao(prepararItensParaRevisao(previa));
+      setPasso(PASSOS.REVISAO);
+    } catch (e) {
+      setErro(e.message || "Não foi possível consultar essa nota. Tente novamente.");
+    } finally {
+      setCarregando(false);
+    }
+  }
 
   async function aoEnviarArquivo(evento) {
     evento.preventDefault();
@@ -31,16 +100,7 @@ export default function ModalImportarNota({ token, itensEstoque, aoFechar, aoCon
     setCarregando(true);
     try {
       const previa = await importarNotaFiscal(arquivo, token);
-      // Cada item da prévia ganha campos extras editáveis (local, estoque
-      // mínimo, nome final) só usados quando o status for "novo" — o
-      // usuário pode ajustar antes de confirmar.
-      const itensComEdicao = previa.map((item) => ({
-        ...item,
-        nomeFinal: item.nome_nota,
-        local: LOCAIS[1],
-        estoqueMinimo: 0,
-      }));
-      setItensRevisao(itensComEdicao);
+      setItensRevisao(prepararItensParaRevisao(previa));
       setPasso(PASSOS.REVISAO);
     } catch (e) {
       setErro(
@@ -127,6 +187,182 @@ export default function ModalImportarNota({ token, itensEstoque, aoFechar, aoCon
           </p>
         )}
 
+        {passo === PASSOS.ESCOLHA && (
+          <>
+            <p className="subtitulo" style={{ marginBottom: "16px" }}>
+              Como você quer importar a nota?
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              <button
+                type="button"
+                className="botao botao-secundario"
+                style={{ textAlign: "left", padding: "14px", opacity: 0.6, cursor: "not-allowed" }}
+                disabled
+                title="Indisponível: a SEFAZ exige verificação anti-robô (captcha) nessa consulta"
+              >
+                <strong>Ler QR Code da nota</strong> <span style={{ fontSize: "12px" }}>(indisponível)</span>
+                <br />
+                <span style={{ fontSize: "13px", fontWeight: 400 }}>
+                  O site da SEFAZ exige verificação anti-robô nessa consulta
+                  pública, então essa opção está desativada por enquanto. Use
+                  o XML da nota abaixo.
+                </span>
+              </button>
+              <button
+                type="button"
+                className="botao botao-secundario"
+                style={{ textAlign: "left", padding: "14px" }}
+                onClick={() => setPasso(PASSOS.FOTO)}
+              >
+                <strong>Enviar foto ou print da nota</strong>
+                <br />
+                <span style={{ fontSize: "13px", fontWeight: 400 }}>
+                  Um print da tela de confirmação da SEFAZ funciona melhor
+                  que foto do cupom de papel — o app lê os itens
+                  automaticamente (revise antes de confirmar).
+                </span>
+              </button>
+              <button
+                type="button"
+                className="botao botao-secundario"
+                style={{ textAlign: "left", padding: "14px" }}
+                onClick={() => setPasso(PASSOS.UPLOAD)}
+              >
+                <strong>Enviar arquivo XML</strong>
+                <br />
+                <span style={{ fontSize: "13px", fontWeight: 400 }}>
+                  Se você já tem o XML da nota fiscal salvo.
+                </span>
+              </button>
+            </div>
+
+            <div className="acoes-modal">
+              <button type="button" className="botao botao-secundario" onClick={aoFechar}>
+                Cancelar
+              </button>
+            </div>
+          </>
+        )}
+
+        {passo === PASSOS.FOTO && (
+          <form onSubmit={aoEnviarFoto}>
+            <p className="subtitulo" style={{ marginBottom: "12px" }}>
+              Envie uma foto ou print da nota fiscal. O app lê o texto da
+              imagem automaticamente (OCR) — revise os itens antes de
+              confirmar, já que a leitura pode errar em imagens de baixa
+              qualidade.
+            </p>
+
+            <div className="campo-formulario">
+              <label htmlFor="foto-nota">Foto ou print</label>
+              <input
+                id="foto-nota"
+                type="file"
+                accept="image/*"
+                ref={inputFotoRef}
+                required
+              />
+            </div>
+
+            <div className="acoes-modal">
+              <button
+                type="button"
+                className="botao botao-secundario"
+                onClick={() => setPasso(PASSOS.ESCOLHA)}
+              >
+                Voltar
+              </button>
+              <button type="submit" className="botao botao-primario" disabled={carregando}>
+                {carregando ? "Lendo imagem..." : "Processar"}
+              </button>
+            </div>
+          </form>
+        )}
+
+        {passo === PASSOS.QRCODE && (
+          <>
+            <p className="subtitulo" style={{ marginBottom: "12px" }}>
+              Aponte a câmera para o QR Code impresso no cupom da nota fiscal.
+              Suporte, por enquanto, só para notas do Rio de Janeiro (RJ).
+            </p>
+
+            {usarCamera ? (
+              <>
+                <LeitorQRCode
+                  aoLer={(texto) => {
+                    setUsarCamera(false);
+                    aoProcessarQRCode(texto);
+                  }}
+                  aoErro={(mensagem) => {
+                    setErro(mensagem);
+                    setUsarCamera(false);
+                  }}
+                />
+                <button
+                  type="button"
+                  className="alternar-modo"
+                  style={{ fontSize: "13px", marginTop: "10px" }}
+                  onClick={() => setUsarCamera(false)}
+                >
+                  Não consigo usar a câmera — colar o link
+                </button>
+              </>
+            ) : (
+              <form
+                onSubmit={(evento) => {
+                  evento.preventDefault();
+                  aoProcessarQRCode(urlColada);
+                }}
+              >
+                <div className="campo-formulario">
+                  <label htmlFor="url-qrcode-nota">Link do QR Code</label>
+                  <input
+                    id="url-qrcode-nota"
+                    type="url"
+                    placeholder="https://consultadfe.fazenda.rj.gov.br/consultaNFCe/QRCode?p=..."
+                    value={urlColada}
+                    onChange={(e) => setUrlColada(e.target.value)}
+                    required
+                  />
+                </div>
+                <button
+                  type="button"
+                  className="alternar-modo"
+                  style={{ fontSize: "13px" }}
+                  onClick={() => setUsarCamera(true)}
+                >
+                  Usar a câmera em vez disso
+                </button>
+
+                <div className="acoes-modal">
+                  <button
+                    type="button"
+                    className="botao botao-secundario"
+                    onClick={() => setPasso(PASSOS.ESCOLHA)}
+                  >
+                    Voltar
+                  </button>
+                  <button type="submit" className="botao botao-primario" disabled={carregando}>
+                    {carregando ? "Consultando..." : "Processar"}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {usarCamera && (
+              <div className="acoes-modal">
+                <button
+                  type="button"
+                  className="botao botao-secundario"
+                  onClick={() => setPasso(PASSOS.ESCOLHA)}
+                >
+                  Voltar
+                </button>
+              </div>
+            )}
+          </>
+        )}
+
         {passo === PASSOS.UPLOAD && (
           <form onSubmit={aoEnviarArquivo}>
             <p className="subtitulo" style={{ marginBottom: "12px" }}>
@@ -147,8 +383,12 @@ export default function ModalImportarNota({ token, itensEstoque, aoFechar, aoCon
             </div>
 
             <div className="acoes-modal">
-              <button type="button" className="botao botao-secundario" onClick={aoFechar}>
-                Cancelar
+              <button
+                type="button"
+                className="botao botao-secundario"
+                onClick={() => setPasso(PASSOS.ESCOLHA)}
+              >
+                Voltar
               </button>
               <button type="submit" className="botao botao-primario" disabled={carregando}>
                 {carregando ? "Processando..." : "Processar"}

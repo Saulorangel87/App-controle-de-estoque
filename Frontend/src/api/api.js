@@ -143,6 +143,40 @@ export async function importarNotaFiscal(arquivo, token) {
   return resposta.json();
 }
 
+// Importação via foto/print da nota (Fase 3 — OCR). Mesmo padrão multipart
+// do upload de XML: o navegador define o Content-Type sozinho.
+export async function importarNotaFiscalPorFoto(arquivo, token) {
+  const formData = new FormData();
+  formData.append("arquivo", arquivo);
+
+  const resposta = await fetch(`${URL_BASE}/notas-fiscais/importar-foto`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
+
+  if (!resposta.ok) {
+    const textoErro = await resposta.text();
+    const erro = new Error(textoErro || "Erro na requisição");
+    erro.status = resposta.status;
+    throw erro;
+  }
+
+  return resposta.json();
+}
+
+// Importação via QR Code (Fase 2) — envia a URL lida no QR Code da NFC-e
+// (colada ou capturada pela câmera) para o backend consultar na SEFAZ.
+// Diferente de importarNotaFiscal, aqui o corpo é JSON simples, não
+// multipart — não tem arquivo, só um texto.
+export function importarNotaFiscalPorQRCode(url, token) {
+  return requisitar(
+    "/notas-fiscais/importar-qrcode",
+    { method: "POST", body: JSON.stringify({ url }) },
+    token
+  );
+}
+
 export function confirmarImportacaoNota(entradas, token) {
   return requisitar(
     "/notas-fiscais/confirmar",

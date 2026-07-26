@@ -52,6 +52,15 @@ App controle de estoque/
 - **Importação de nota fiscal (Fase 1 — XML da NF-e)**: upload do XML, tela
   de conferência (Encontrado/Novo item, com opção de associar manualmente),
   e confirmação que soma quantidade ou cadastra item novo em lote
+- **Importação de nota fiscal (Fase 2 — QR Code da NFC-e)**: testada contra
+  uma nota real do RJ e **desativada** — a consulta pública da SEFAZ-RJ exige
+  reCAPTCHA v3 + proteção anti-bot corporativa (F5 Shape/Distributed Cloud
+  Bot Defense), então não é seguro/confiável de automatizar via scraping
+  server-side. O código (`services/nfce_scraper.go`, `LeitorQRCode.jsx`,
+  fluxo de câmera/link no `ModalImportarNota.jsx`) ficou no projeto,
+  desativado (`dominiosPermitidosNFCe` vazio + botão desabilitado no
+  frontend), caso algum estado sem esse tipo de proteção seja avaliado no
+  futuro. Upload de XML (Fase 1) continua sendo o único caminho funcional
 - Código comentado, com cuidados de acessibilidade (labels, foco visível,
   aria-live, aria-modal) e performance (sem fontes externas, sem libs de UI pesadas)
 
@@ -75,8 +84,13 @@ App controle de estoque/
 ## Pendências conhecidas
 - Publicação na Play Store (provavelmente via TWA — Trusted Web Activity —
   reaproveitando o manifest.json e o HTTPS já configurados)
-- Importação de nota fiscal — Fase 2 (PDF da DANFE) e Fase 3 (foto/OCR,
-  exige serviço de OCR pago ou self-hosted com menor precisão)
+- **Importação por QR Code (Fase 2)**: desativada por causa do captcha/anti-bot
+  do RJ (ver "Funcionalidades prontas" acima). Só voltaria a fazer sentido
+  investir nisso se outro estado (UF) relevante pro uso do app não tiver
+  esse tipo de proteção na consulta pública — precisa avaliar antes de
+  reativar `dominiosPermitidosNFCe`
+  e Fase 3 (foto/OCR, exige serviço de OCR pago ou self-hosted com menor
+  precisão)
 - Avaliar se o rate limiting por IP (não por conta) causa fricção real no
   uso — hoje, várias contas na mesma rede/IP podem ser bloqueadas juntas se
   uma errar demais
