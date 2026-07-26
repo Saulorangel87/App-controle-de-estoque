@@ -1,7 +1,6 @@
 package services
 
 import (
-<<<<<<< HEAD
 	"bytes"
 	"errors"
 	"fmt"
@@ -13,13 +12,6 @@ import (
 	"os/exec"
 	"regexp"
 	"strconv"
-=======
-	"errors"
-	"fmt"
-	"os"
-	"os/exec"
-	"regexp"
->>>>>>> 774d74c6f21a1477a584a0d74f8b14f40344279e
 	"strings"
 
 	"controle-estoque/models"
@@ -37,14 +29,8 @@ var (
 
 // ExtrairProdutosDeImagem recebe os bytes de uma foto ou print da nota
 // fiscal, roda OCR (Tesseract, em português) pra extrair o texto, e
-<<<<<<< HEAD
 // interpreta esse texto procurando um dos formatos conhecidos (tela da
 // SEFAZ ou cupom de papel impresso — ver interpretarTextoOCR).
-=======
-// interpreta esse texto procurando o padrão usado pela tela de consulta
-// pública da SEFAZ (nome + código do produto, seguido de quantidade +
-// unidade + valor unitário).
->>>>>>> 774d74c6f21a1477a584a0d74f8b14f40344279e
 //
 // O valor TOTAL de cada item não é lido da imagem — é CALCULADO
 // (quantidade × valor unitário) pelo restante do fluxo, que já faz essa
@@ -56,7 +42,6 @@ var (
 // digital nítido) do que com foto do cupom de papel térmico (mais difícil
 // pra qualquer OCR, por causa do desbotamento/reflexo/amassado do papel).
 func ExtrairProdutosDeImagem(imagem []byte) ([]models.ProdXML, error) {
-<<<<<<< HEAD
 	imagemDecodificada, _, err := image.Decode(bytes.NewReader(imagem))
 	if err != nil {
 		// Formato de imagem não suportado ou arquivo corrompido — não tem
@@ -138,22 +123,12 @@ func finalizarExtracao(texto string, produtos []models.ProdXML) ([]models.ProdXM
 		// Depois que o parser estiver validado, pode remover este bloco e
 		// a função salvarDebugOCR.
 		salvarDebugOCR(texto)
-=======
-	texto, err := rodarOCR(imagem)
-	if err != nil {
-		return nil, err
-	}
-
-	produtos := interpretarTextoOCR(texto)
-	if len(produtos) == 0 {
->>>>>>> 774d74c6f21a1477a584a0d74f8b14f40344279e
 		return nil, ErrOCRSemItens
 	}
 
 	return produtos, nil
 }
 
-<<<<<<< HEAD
 // salvarDebugOCR grava o texto bruto da última leitura de OCR num arquivo
 // local, na pasta onde o backend está rodando. É só uma ferramenta de
 // depuração enquanto ajustamos o parser — falha em salvar é ignorada de
@@ -169,24 +144,12 @@ func salvarDebugOCR(texto string) {
 // complicar a build do Go com CGO.
 func rodarOCR(imagemProcessada []byte) (string, error) {
 	arquivoTemp, err := os.CreateTemp("", "nota-ocr-*.png")
-=======
-// rodarOCR salva a imagem num arquivo temporário e chama o Tesseract (linha
-// de comando) pra extrair o texto. Usamos o binário via exec.Command, e não
-// uma lib com bindings C (tipo gosseract) — assim o Dockerfile só precisa
-// instalar o pacote tesseract-ocr, sem complicar a build do Go com CGO.
-func rodarOCR(imagem []byte) (string, error) {
-	arquivoTemp, err := os.CreateTemp("", "nota-ocr-*")
->>>>>>> 774d74c6f21a1477a584a0d74f8b14f40344279e
 	if err != nil {
 		return "", ErrOCRFalhou
 	}
 	defer os.Remove(arquivoTemp.Name())
 
-<<<<<<< HEAD
 	if _, err := arquivoTemp.Write(imagemProcessada); err != nil {
-=======
-	if _, err := arquivoTemp.Write(imagem); err != nil {
->>>>>>> 774d74c6f21a1477a584a0d74f8b14f40344279e
 		arquivoTemp.Close()
 		return "", ErrOCRFalhou
 	}
