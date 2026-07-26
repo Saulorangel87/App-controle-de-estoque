@@ -1,6 +1,7 @@
 package services
 
 import (
+<<<<<<< HEAD
 	"bytes"
 	"errors"
 	"fmt"
@@ -12,6 +13,13 @@ import (
 	"os/exec"
 	"regexp"
 	"strconv"
+=======
+	"errors"
+	"fmt"
+	"os"
+	"os/exec"
+	"regexp"
+>>>>>>> 774d74c6f21a1477a584a0d74f8b14f40344279e
 	"strings"
 
 	"controle-estoque/models"
@@ -29,8 +37,14 @@ var (
 
 // ExtrairProdutosDeImagem recebe os bytes de uma foto ou print da nota
 // fiscal, roda OCR (Tesseract, em português) pra extrair o texto, e
+<<<<<<< HEAD
 // interpreta esse texto procurando um dos formatos conhecidos (tela da
 // SEFAZ ou cupom de papel impresso — ver interpretarTextoOCR).
+=======
+// interpreta esse texto procurando o padrão usado pela tela de consulta
+// pública da SEFAZ (nome + código do produto, seguido de quantidade +
+// unidade + valor unitário).
+>>>>>>> 774d74c6f21a1477a584a0d74f8b14f40344279e
 //
 // O valor TOTAL de cada item não é lido da imagem — é CALCULADO
 // (quantidade × valor unitário) pelo restante do fluxo, que já faz essa
@@ -42,6 +56,7 @@ var (
 // digital nítido) do que com foto do cupom de papel térmico (mais difícil
 // pra qualquer OCR, por causa do desbotamento/reflexo/amassado do papel).
 func ExtrairProdutosDeImagem(imagem []byte) ([]models.ProdXML, error) {
+<<<<<<< HEAD
 	imagemDecodificada, _, err := image.Decode(bytes.NewReader(imagem))
 	if err != nil {
 		// Formato de imagem não suportado ou arquivo corrompido — não tem
@@ -123,12 +138,22 @@ func finalizarExtracao(texto string, produtos []models.ProdXML) ([]models.ProdXM
 		// Depois que o parser estiver validado, pode remover este bloco e
 		// a função salvarDebugOCR.
 		salvarDebugOCR(texto)
+=======
+	texto, err := rodarOCR(imagem)
+	if err != nil {
+		return nil, err
+	}
+
+	produtos := interpretarTextoOCR(texto)
+	if len(produtos) == 0 {
+>>>>>>> 774d74c6f21a1477a584a0d74f8b14f40344279e
 		return nil, ErrOCRSemItens
 	}
 
 	return produtos, nil
 }
 
+<<<<<<< HEAD
 // salvarDebugOCR grava o texto bruto da última leitura de OCR num arquivo
 // local, na pasta onde o backend está rodando. É só uma ferramenta de
 // depuração enquanto ajustamos o parser — falha em salvar é ignorada de
@@ -144,12 +169,24 @@ func salvarDebugOCR(texto string) {
 // complicar a build do Go com CGO.
 func rodarOCR(imagemProcessada []byte) (string, error) {
 	arquivoTemp, err := os.CreateTemp("", "nota-ocr-*.png")
+=======
+// rodarOCR salva a imagem num arquivo temporário e chama o Tesseract (linha
+// de comando) pra extrair o texto. Usamos o binário via exec.Command, e não
+// uma lib com bindings C (tipo gosseract) — assim o Dockerfile só precisa
+// instalar o pacote tesseract-ocr, sem complicar a build do Go com CGO.
+func rodarOCR(imagem []byte) (string, error) {
+	arquivoTemp, err := os.CreateTemp("", "nota-ocr-*")
+>>>>>>> 774d74c6f21a1477a584a0d74f8b14f40344279e
 	if err != nil {
 		return "", ErrOCRFalhou
 	}
 	defer os.Remove(arquivoTemp.Name())
 
+<<<<<<< HEAD
 	if _, err := arquivoTemp.Write(imagemProcessada); err != nil {
+=======
+	if _, err := arquivoTemp.Write(imagem); err != nil {
+>>>>>>> 774d74c6f21a1477a584a0d74f8b14f40344279e
 		arquivoTemp.Close()
 		return "", ErrOCRFalhou
 	}
@@ -160,6 +197,7 @@ func rodarOCR(imagemProcessada []byte) (string, error) {
 	// "--psm 6": trata a imagem como um bloco uniforme de texto — funciona
 	// melhor pra telas/listas como essa do que o modo automático padrão,
 	// que é pensado pra páginas de documento com parágrafos "de verdade".
+<<<<<<< HEAD
 	// "--dpi 300": screenshots normalmente não têm informação de DPI
 	// embutida, e sem isso o Tesseract às vezes assume uma resolução baixa
 	// e piora a leitura de números pequenos — forçar 300 evita essa
@@ -169,6 +207,12 @@ func rodarOCR(imagemProcessada []byte) (string, error) {
 	saida, err := exec.Command(
 		"tesseract", arquivoTemp.Name(), "stdout",
 		"-l", "por", "--psm", "6", "--dpi", "300",
+=======
+	// "stdout": manda o texto reconhecido direto pra saída padrão, sem
+	// precisar gerenciar mais um arquivo temporário de resultado.
+	saida, err := exec.Command(
+		"tesseract", arquivoTemp.Name(), "stdout", "-l", "por", "--psm", "6",
+>>>>>>> 774d74c6f21a1477a584a0d74f8b14f40344279e
 	).Output()
 	if err != nil {
 		return "", fmt.Errorf("%w: %v", ErrOCRFalhou, err)
@@ -177,6 +221,7 @@ func rodarOCR(imagemProcessada []byte) (string, error) {
 	return string(saida), nil
 }
 
+<<<<<<< HEAD
 // rotacionar90 gira a imagem em incrementos de 90° no sentido horário.
 // "vezes" pode ser 0 (sem rotação), 1 (90°), 2 (180°) ou 3 (270°) — usado
 // pra testar todas as orientações possíveis de uma foto tirada com celular
@@ -249,6 +294,8 @@ func prepararImagemParaOCR(imagemDecodificada image.Image) ([]byte, error) {
 	return buffer.Bytes(), nil
 }
 
+=======
+>>>>>>> 774d74c6f21a1477a584a0d74f8b14f40344279e
 // padraoNomeCodigo casa linhas como "LEITE INTEGRAL GODAM (Código: 22080 )".
 // (?m) trata cada linha do texto separadamente. Aceita pequenas variações
 // que o OCR costuma introduzir na palavra "Código" (0 no lugar do O, etc.)
@@ -258,6 +305,7 @@ var padraoNomeCodigo = regexp.MustCompile(`(?m)^(.+?)\s*\(C[oó0]digo:?\s*(\d+)\
 // padraoQuantidade casa trechos como "Qtde.:1 UN: UN Vl. Unit.: 5,89" — os
 // rótulos ("Qtde", "UN", "Vl. Unit") são fixos no template da SEFAZ, então
 // são um ponto de ancoragem confiável mesmo se a pontuação ao redor variar
+<<<<<<< HEAD
 // um pouco por causa de ruído do OCR. O [VW][l1I] aceita "Vl", "V1", "VI"
 // ou "WI" — testando contra notas reais, o Tesseract já leu "Vl." tanto como
 // "VI." (confunde "l" minúsculo com "I" maiúsculo) quanto como "WI." (W no
@@ -326,14 +374,34 @@ func interpretarTextoOCR(texto string) []models.ProdXML {
 // aparição é mais confiável do que tentar casar tudo numa regex só, já que
 // o OCR quebra linha de forma imprevisível dependendo da imagem.
 func interpretarFormatoTelaSefaz(texto string) []models.ProdXML {
+=======
+// um pouco por causa de ruído do OCR.
+var padraoQuantidade = regexp.MustCompile(
+	`(?mi)Qtde\.?:?\s*([\d.,]+)\s+UN:?\s*(\S+)\s+Vl\.?\s*Unit\.?:?\s*([\d.,]+)`,
+)
+
+// interpretarTextoOCR casa cada "nome + código" (na ordem em que aparecem
+// no texto) com a "quantidade + unidade + valor" correspondente (também na
+// ordem em que aparecem) — o template da SEFAZ sempre intercala essas duas
+// linhas por item, então parear PELA ORDEM de aparição é mais confiável do
+// que tentar casar tudo numa regex só, já que o OCR quebra linha de forma
+// imprevisível dependendo da imagem.
+func interpretarTextoOCR(texto string) []models.ProdXML {
+>>>>>>> 774d74c6f21a1477a584a0d74f8b14f40344279e
 	nomes := padraoNomeCodigo.FindAllStringSubmatch(texto, -1)
 	quantidades := padraoQuantidade.FindAllStringSubmatch(texto, -1)
 
 	// Se as contagens não baterem, o OCR deve ter engolido ou duplicado
+<<<<<<< HEAD
 	// alguma linha — melhor devolver nada (interpretarTextoOCR cai pro
 	// formato de cupom de papel, e se esse também não achar nada, o
 	// handler cai no erro ErrOCRSemItens) do que arriscar parear um item
 	// com a quantidade errada silenciosamente.
+=======
+	// alguma linha — melhor devolver nada (o handler cai no erro
+	// ErrOCRSemItens, pedindo uma imagem mais nítida) do que arriscar
+	// parear um item com a quantidade errada silenciosamente.
+>>>>>>> 774d74c6f21a1477a584a0d74f8b14f40344279e
 	if len(nomes) == 0 || len(nomes) != len(quantidades) {
 		return nil
 	}
@@ -345,6 +413,7 @@ func interpretarFormatoTelaSefaz(texto string) []models.ProdXML {
 			continue
 		}
 
+<<<<<<< HEAD
 		quantidadeLida := strings.ReplaceAll(strings.TrimSpace(quantidades[i][1]), "?", "")
 		if quantidadeLida == "" {
 			// O dígito sumiu do OCR — assume 1 (o mais comum em compras),
@@ -355,6 +424,11 @@ func interpretarFormatoTelaSefaz(texto string) []models.ProdXML {
 		produtos = append(produtos, models.ProdXML{
 			Nome:       nome,
 			Quantidade: paraNumeroDecimal(quantidadeLida),
+=======
+		produtos = append(produtos, models.ProdXML{
+			Nome:       nome,
+			Quantidade: paraNumeroDecimal(strings.TrimSpace(quantidades[i][1])),
+>>>>>>> 774d74c6f21a1477a584a0d74f8b14f40344279e
 			Unidade:    normalizarUnidade(strings.TrimSpace(quantidades[i][2])),
 			ValorUnit:  paraNumeroDecimal(strings.TrimSpace(quantidades[i][3])),
 		})
@@ -362,6 +436,7 @@ func interpretarFormatoTelaSefaz(texto string) []models.ProdXML {
 
 	return produtos
 }
+<<<<<<< HEAD
 
 // interpretarFormatoCupomPapel casa o formato de uma linha só usado no
 // cupom de papel impresso (ver padraoItemCupomPapel). Diferente do formato
@@ -426,3 +501,5 @@ func interpretarFormatoCupomComIndicadorImposto(texto string) []models.ProdXML {
 
 	return produtos
 }
+=======
+>>>>>>> 774d74c6f21a1477a584a0d74f8b14f40344279e

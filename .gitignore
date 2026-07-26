@@ -2,7 +2,10 @@
 Backend/.env
 Backend/estoque.db
 Backend/debug_nfce_ultima_consulta.html
+<<<<<<< HEAD
 Backend/debug_ocr_ultimo_texto.txt
+=======
+>>>>>>> 774d74c6f21a1477a584a0d74f8b14f40344279e
 
 # Frontend
 Frontend/node_modules
