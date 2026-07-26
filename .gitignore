@@ -1,6 +1,8 @@
 # Backend
 Backend/.env
 Backend/estoque.db
+Backend/debug_nfce_ultima_consulta.html
+Backend/debug_ocr_ultimo_texto.txt
 
 # Frontend
 Frontend/node_modules

@@ -40,8 +40,14 @@ func main() {
 	mux.HandleFunc("POST /itens/{id}/retirar", middleware.Autenticar(handlers.RetirarItem))
 	mux.HandleFunc("GET /itens/estoque-baixo", middleware.Autenticar(handlers.ItensEstoqueBaixo))
 
-	// Importação de nota fiscal (Fase 1 — XML da NF-e). Ambas exigem login.
+	// Importação de nota fiscal. "importar" (Fase 1, via upload de XML),
+	// "importar-foto" (Fase 3, via OCR de foto/print da nota) e
+	// "importar-qrcode" (Fase 2, desativada — ver services/nfce_scraper.go)
+	// devolvem a mesma prévia — "confirmar" é compartilhado pelos fluxos.
+	// Todas exigem login.
 	mux.HandleFunc("POST /notas-fiscais/importar", middleware.Autenticar(handlers.ImportarNotaFiscal))
+	mux.HandleFunc("POST /notas-fiscais/importar-foto", middleware.Autenticar(handlers.ImportarNotaFiscalPorFoto))
+	mux.HandleFunc("POST /notas-fiscais/importar-qrcode", middleware.Autenticar(handlers.ImportarNotaFiscalPorQRCode))
 	mux.HandleFunc("POST /notas-fiscais/confirmar", middleware.Autenticar(handlers.ConfirmarImportacao))
 
 	log.Println("servidor rodando na porta 8080")
