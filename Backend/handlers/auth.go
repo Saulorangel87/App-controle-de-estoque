@@ -99,7 +99,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		"exp":        time.Now().Add(72 * time.Hour).Unix(),
 	})
 
-	tokenAssinado, err := token.SignedString(config.ChaveSecreta)
+	tokenAssinado, err := token.SignedString(config.ChaveSecreta())
 	if err != nil {
 		http.Error(w, "erro ao gerar token", http.StatusInternalServerError)
 		return
@@ -133,9 +133,9 @@ func ObterPerguntaSeguranca(w http.ResponseWriter, r *http.Request) {
 }
 
 type redefinicaoEntrada struct {
-	Nome        string `json:"nome"`
-	Resposta    string `json:"resposta"`
-	NovaSenha   string `json:"nova_senha"`
+	Nome      string `json:"nome"`
+	Resposta  string `json:"resposta"`
+	NovaSenha string `json:"nova_senha"`
 }
 
 // RedefinirSenha confere a resposta de segurança e, se bater, troca a senha do usuário.
