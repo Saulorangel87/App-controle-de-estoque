@@ -20,7 +20,11 @@ WORKDIR /app
 
 # ca-certificates é necessário para chamadas HTTPS de saída (não usamos hoje,
 # mas evita surpresa se alguma dependência futura precisar).
-RUN apk add --no-cache ca-certificates
+# tesseract-ocr + tesseract-ocr-data-por: usados pela importação de nota
+# fiscal via foto/print (OCR) — o binário "tesseract" é chamado via
+# exec.Command pelo backend, não é uma lib Go, então precisa estar instalado
+# na imagem final.
+RUN apk add --no-cache ca-certificates tesseract-ocr tesseract-ocr-data-por
 
 COPY --from=builder /app/servidor .
 

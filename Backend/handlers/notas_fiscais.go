@@ -3,14 +3,17 @@ package handlers
 import (
 	"encoding/json"
 	"encoding/xml"
+	"errors"
 	"io"
 	"net/http"
 	"strconv"
 	"strings"
 
+	"controle-estoque/config"
 	"controle-estoque/database"
 	"controle-estoque/middleware"
 	"controle-estoque/models"
+	"controle-estoque/services"
 )
 
 // tamanhoMaximoUpload limita o upload a 10MB — um XML de nota fiscal real
@@ -53,10 +56,143 @@ func ImportarNotaFiscal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	itensEstoque, err := buscarItensDoUsuario(usuarioID)
+	resultado, err := montarPreviaImportacao(usuarioID, produtos)
 	if err != nil {
 		http.Error(w, "erro ao consultar o estoque atual", http.StatusInternalServerError)
 		return
+	}
+
+	json.NewEncoder(w).Encode(resultado)
+}
+
+// ImportarNotaFiscalPorFoto recebe uma foto ou print da nota fiscal (ou da
+// tela de confirmação da SEFAZ), roda OCR pra extrair os produtos e devolve
+// a MESMA prévia que os outros fluxos de importação devolvem — a tela de
+// conferência no frontend é reaproveitada sem precisar saber de onde os
+// dados vieram.
+func ImportarNotaFiscalPorFoto(w http.ResponseWriter, r *http.Request) {
+	usuarioID := r.Context().Value(middleware.UsuarioIDContexto).(int)
+
+	if err := r.ParseMultipartForm(tamanhoMaximoUpload); err != nil {
+		http.Error(w, "imagem inválida ou muito grande (máximo 10MB)", http.StatusBadRequest)
+		return
+	}
+
+	arquivo, _, err := r.FormFile("arquivo")
+	if err != nil {
+		http.Error(w, "envie a foto ou print da nota no campo 'arquivo'", http.StatusBadRequest)
+		return
+	}
+	defer arquivo.Close()
+
+	conteudo, err := io.ReadAll(arquivo)
+	if err != nil {
+		http.Error(w, "erro ao ler a imagem", http.StatusInternalServerError)
+		return
+	}
+
+	produtos, err := services.ExtrairProdutosDeImagem(conteudo)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	resultado, err := montarPreviaImportacao(usuarioID, produtos)
+	if err != nil {
+		http.Error(w, "erro ao consultar o estoque atual", http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(resultado)
+}
+
+// ImportarNotaFiscalPorFotoDePapel é o equivalente de ImportarNotaFiscalPorFoto,
+// mas usa OCR na nuvem (OCR.space) em vez do Tesseract local — pensado
+// especificamente pra foto de cupom de papel físico, onde o motor local
+// vinha falhando mesmo depois de várias rodadas de ajuste (rotação, PSM,
+// binarização). Print de tela continua indo pelo endpoint de cima.
+func ImportarNotaFiscalPorFotoDePapel(w http.ResponseWriter, r *http.Request) {
+	usuarioID := r.Context().Value(middleware.UsuarioIDContexto).(int)
+
+	if err := r.ParseMultipartForm(tamanhoMaximoUpload); err != nil {
+		http.Error(w, "imagem inválida ou muito grande (máximo 10MB)", http.StatusBadRequest)
+		return
+	}
+
+	arquivo, _, err := r.FormFile("arquivo")
+	if err != nil {
+		http.Error(w, "envie a foto da nota no campo 'arquivo'", http.StatusBadRequest)
+		return
+	}
+	defer arquivo.Close()
+
+	conteudo, err := io.ReadAll(arquivo)
+	if err != nil {
+		http.Error(w, "erro ao ler a imagem", http.StatusInternalServerError)
+		return
+	}
+
+	produtos, err := services.ExtrairProdutosDeImagemViaOCRSpace(conteudo, config.ChaveOCRSpace())
+	if err != nil {
+		status := http.StatusBadGateway
+		if errors.Is(err, services.ErrOCRCloudSemChave) {
+			status = http.StatusServiceUnavailable
+		}
+		http.Error(w, err.Error(), status)
+		return
+	}
+
+	resultado, err := montarPreviaImportacao(usuarioID, produtos)
+	if err != nil {
+		http.Error(w, "erro ao consultar o estoque atual", http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(resultado)
+}
+
+// ImportarNotaFiscalPorQRCode recebe a URL lida no QR Code de uma NFC-e
+// (colada pelo usuário ou capturada pela câmera no frontend), consulta essa
+// URL na SEFAZ, extrai os produtos e devolve a MESMA prévia que o fluxo de
+// upload de XML devolve — a tela de conferência no frontend é reaproveitada
+// sem precisar saber de onde os dados vieram.
+func ImportarNotaFiscalPorQRCode(w http.ResponseWriter, r *http.Request) {
+	usuarioID := r.Context().Value(middleware.UsuarioIDContexto).(int)
+
+	var corpo struct {
+		URL string `json:"url"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&corpo); err != nil || strings.TrimSpace(corpo.URL) == "" {
+		http.Error(w, "envie a URL lida no QR Code da nota", http.StatusBadRequest)
+		return
+	}
+
+	produtos, err := services.ConsultarProdutosPorURL(corpo.URL)
+	if err != nil {
+		status := http.StatusBadGateway
+		if errors.Is(err, services.ErrURLInvalida) || errors.Is(err, services.ErrDominioNaoSuportado) {
+			status = http.StatusBadRequest
+		}
+		http.Error(w, err.Error(), status)
+		return
+	}
+
+	resultado, err := montarPreviaImportacao(usuarioID, produtos)
+	if err != nil {
+		http.Error(w, "erro ao consultar o estoque atual", http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(resultado)
+}
+
+// montarPreviaImportacao compara os produtos (vindos do XML ou da consulta
+// por QR Code, tanto faz) com o estoque atual do usuário e monta a prévia
+// que o frontend exibe na tela de conferência — nada é salvo aqui ainda.
+func montarPreviaImportacao(usuarioID int, produtos []models.ProdXML) ([]models.ItemImportado, error) {
+	itensEstoque, err := buscarItensDoUsuario(usuarioID)
+	if err != nil {
+		return nil, err
 	}
 
 	resultado := make([]models.ItemImportado, 0, len(produtos))
@@ -80,7 +216,7 @@ func ImportarNotaFiscal(w http.ResponseWriter, r *http.Request) {
 		resultado = append(resultado, item)
 	}
 
-	json.NewEncoder(w).Encode(resultado)
+	return resultado, nil
 }
 
 // ConfirmarImportacao recebe a lista já revisada pelo usuário (com os itens

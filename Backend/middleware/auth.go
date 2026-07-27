@@ -31,7 +31,7 @@ func Autenticar(proximo http.HandlerFunc) http.HandlerFunc {
 		tokenString := partes[1]
 
 		token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
-			return config.ChaveSecreta, nil
+			return config.ChaveSecreta(), nil
 		})
 		if err != nil || !token.Valid {
 			http.Error(w, "token inválido ou expirado", http.StatusUnauthorized)
