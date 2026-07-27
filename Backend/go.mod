@@ -2,8 +2,6 @@ module controle-estoque
 
 go 1.26.5
 
-require github.com/PuerkitoBio/goquery v1.9.2
-
 require (
 	github.com/PuerkitoBio/goquery v1.9.2
 	github.com/golang-jwt/jwt/v5 v5.3.1
