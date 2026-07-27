@@ -106,6 +106,7 @@ func ImportarNotaFiscalPorFoto(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(resultado)
 }
 
+<<<<<<< HEAD
 // ImportarNotaFiscalPorFotoDePapel é o equivalente de ImportarNotaFiscalPorFoto,
 // mas usa OCR na nuvem (OCR.space) em vez do Tesseract local — pensado
 // especificamente pra foto de cupom de papel físico, onde o motor local
@@ -151,6 +152,8 @@ func ImportarNotaFiscalPorFotoDePapel(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(resultado)
 }
 
+=======
+>>>>>>> 482a404a93b8b431c81c28e1caa87cd9ec93d222
 // ImportarNotaFiscalPorQRCode recebe a URL lida no QR Code de uma NFC-e
 // (colada pelo usuário ou capturada pela câmera no frontend), consulta essa
 // URL na SEFAZ, extrai os produtos e devolve a MESMA prévia que o fluxo de

@@ -27,6 +27,7 @@ var (
 	)
 )
 
+<<<<<<< HEAD
 // psmPrints é o Page Segmentation Mode usado na primeira tentativa —
 // "bloco uniforme de texto", bom pra prints/screenshots digitais (a
 // maioria dos casos, e mais rápido por ser uma tentativa só por rotação).
@@ -38,6 +39,8 @@ const psmPrints = "6"
 // bordas e inclinação que um "bloco uniforme" não modela bem.
 var psmsFotoPapel = []string{"4", "11"}
 
+=======
+>>>>>>> 482a404a93b8b431c81c28e1caa87cd9ec93d222
 // ExtrairProdutosDeImagem recebe os bytes de uma foto ou print da nota
 // fiscal, roda OCR (Tesseract, em português) pra extrair o texto, e
 // interpreta esse texto procurando um dos formatos conhecidos (tela da
@@ -51,14 +54,19 @@ var psmsFotoPapel = []string{"4", "11"}
 //
 // FUNCIONA MELHOR com um print da tela de confirmação da SEFAZ (texto
 // digital nítido) do que com foto do cupom de papel térmico (mais difícil
+<<<<<<< HEAD
 // pra qualquer OCR, por causa do desbotamento/reflexo/amassado do papel) —
 // por isso a segunda camada abaixo existe especificamente pra foto física.
+=======
+// pra qualquer OCR, por causa do desbotamento/reflexo/amassado do papel).
+>>>>>>> 482a404a93b8b431c81c28e1caa87cd9ec93d222
 func ExtrairProdutosDeImagem(imagem []byte) ([]models.ProdXML, error) {
 	imagemDecodificada, _, err := image.Decode(bytes.NewReader(imagem))
 	if err != nil {
 		// Formato de imagem não suportado ou arquivo corrompido — não tem
 		// como rotacionar/pré-processar nesse caso, tenta OCR direto nos
 		// bytes originais como última tentativa.
+<<<<<<< HEAD
 		texto, errOCR := rodarOCR(imagem, psmPrints)
 		if errOCR != nil {
 			return nil, errOCR
@@ -109,6 +117,26 @@ func ExtrairProdutosDeImagem(imagem []byte) ([]models.ProdXML, error) {
 func tentarComPSMs(imagemDecodificada image.Image, psms []string) (
 	melhorTexto string, melhoresProdutos []models.ProdXML, rodouAlgumaVez bool, ultimoErro error,
 ) {
+=======
+		texto, errOCR := rodarOCR(imagem)
+		if errOCR != nil {
+			return nil, errOCR
+		}
+		return finalizarExtracao(texto, nil)
+	}
+
+	// Foto tirada com celular pode vir em qualquer orientação — o
+	// Tesseract não gira a imagem sozinho, e texto "deitado" praticamente
+	// não é reconhecido. Testamos as 4 rotações possíveis (0°, 90°, 180°,
+	// 270°) e ficamos com a que reconhecer mais itens. Roda um pouco mais
+	// lento (até 4 chamadas ao Tesseract em vez de 1), mas é uma operação
+	// sob demanda, não algo que precise ser instantâneo.
+	var melhorTexto string
+	var melhoresProdutos []models.ProdXML
+	var ultimoErro error
+	primeiraTentativa := true
+
+>>>>>>> 482a404a93b8b431c81c28e1caa87cd9ec93d222
 	for rotacoes := 0; rotacoes < 4; rotacoes++ {
 		imagemRotacionada := rotacionar90(imagemDecodificada, rotacoes)
 
@@ -118,6 +146,7 @@ func tentarComPSMs(imagemDecodificada image.Image, psms []string) (
 			continue
 		}
 
+<<<<<<< HEAD
 		for _, psm := range psms {
 			texto, err := rodarOCR(imagemProcessada, psm)
 			if err != nil {
@@ -138,6 +167,44 @@ func tentarComPSMs(imagemDecodificada image.Image, psms []string) (
 		}
 	}
 	return
+=======
+		texto, err := rodarOCR(imagemProcessada)
+		if err != nil {
+			ultimoErro = err
+			continue
+		}
+
+		// Garante que SEMPRE sobra algum texto pra debug, mesmo que
+		// nenhuma rotação encontre itens — sem isso, quando as 4
+		// tentativas falham, melhorTexto ficaria vazio (string zero-value)
+		// em vez de mostrar o que o Tesseract realmente leu.
+		if primeiraTentativa {
+			melhorTexto = texto
+			primeiraTentativa = false
+		}
+
+		produtos := interpretarTextoOCR(texto)
+		if len(produtos) > len(melhoresProdutos) {
+			melhoresProdutos = produtos
+			melhorTexto = texto
+		}
+	}
+
+	if primeiraTentativa {
+		// Chegou aqui e "primeiraTentativa" continua true quer dizer que
+		// as 4 rotações falharam antes mesmo de conseguir rodar o OCR
+		// (nenhuma teve chance de setar melhorTexto) — isso é diferente
+		// de "rodou o OCR mas não achou os itens". Devolve o erro real do
+		// Tesseract em vez de mascarar como ErrOCRSemItens, senão fica
+		// impossível saber (e debugar) o que realmente deu errado.
+		if ultimoErro != nil {
+			return nil, ultimoErro
+		}
+		return nil, ErrOCRFalhou
+	}
+
+	return finalizarExtracao(melhorTexto, melhoresProdutos)
+>>>>>>> 482a404a93b8b431c81c28e1caa87cd9ec93d222
 }
 
 // finalizarExtracao centraliza a decisão final: se algum ângulo testado
@@ -170,7 +237,11 @@ func salvarDebugOCR(texto string) {
 // binário via exec.Command, e não uma lib com bindings C (tipo gosseract)
 // — assim o Dockerfile só precisa instalar o pacote tesseract-ocr, sem
 // complicar a build do Go com CGO.
+<<<<<<< HEAD
 func rodarOCR(imagemProcessada []byte, psm string) (string, error) {
+=======
+func rodarOCR(imagemProcessada []byte) (string, error) {
+>>>>>>> 482a404a93b8b431c81c28e1caa87cd9ec93d222
 	arquivoTemp, err := os.CreateTemp("", "nota-ocr-*.png")
 	if err != nil {
 		return "", ErrOCRFalhou
@@ -185,8 +256,14 @@ func rodarOCR(imagemProcessada []byte, psm string) (string, error) {
 
 	// "-l por": usa o idioma português (precisa do pacote de idioma
 	// instalado junto com o tesseract-ocr, ver Backend.Dockerfile).
+<<<<<<< HEAD
 	// "--psm": ver psmPrints/psmsFotoPapel — modo de segmentação de página,
 	// varia conforme a origem provável da imagem (tela digital vs papel).
+=======
+	// "--psm 6": trata a imagem como um bloco uniforme de texto — funciona
+	// melhor pra telas/listas como essa do que o modo automático padrão,
+	// que é pensado pra páginas de documento com parágrafos "de verdade".
+>>>>>>> 482a404a93b8b431c81c28e1caa87cd9ec93d222
 	// "--dpi 300": screenshots normalmente não têm informação de DPI
 	// embutida, e sem isso o Tesseract às vezes assume uma resolução baixa
 	// e piora a leitura de números pequenos — forçar 300 evita essa
@@ -195,7 +272,11 @@ func rodarOCR(imagemProcessada []byte, psm string) (string, error) {
 	// precisar gerenciar mais um arquivo temporário de resultado.
 	saida, err := exec.Command(
 		"tesseract", arquivoTemp.Name(), "stdout",
+<<<<<<< HEAD
 		"-l", "por", "--psm", psm, "--dpi", "300",
+=======
+		"-l", "por", "--psm", "6", "--dpi", "300",
+>>>>>>> 482a404a93b8b431c81c28e1caa87cd9ec93d222
 	).Output()
 	if err != nil {
 		return "", fmt.Errorf("%w: %v", ErrOCRFalhou, err)
@@ -240,6 +321,7 @@ func rotacionarUmaVez(img image.Image) image.Image {
 const fatorAmpliacao = 3
 
 // prepararImagemParaOCR recebe uma imagem já decodificada (e, se for o
+<<<<<<< HEAD
 // caso, já rotacionada — ver rotacionar90), converte pra escala de cinza,
 // amplia a resolução e binariza (preto e branco puro, sem cinza) usando o
 // método de Otsu, devolvendo um novo PNG.
@@ -249,6 +331,12 @@ const fatorAmpliacao = 3
 // caracteres; binarizar remove o "cinza" residual (sombra, papel
 // amarelado, compressão JPEG) que confunde o Tesseract — ele funciona bem
 // melhor com preto/branco puro do que com tons de cinza intermediários.
+=======
+// caso, já rotacionada — ver rotacionar90), converte pra escala de cinza e
+// amplia a resolução, devolvendo um novo PNG. Escala de cinza reduz ruído
+// de cor que não ajuda em nada o reconhecimento de texto; ampliar dá mais
+// definição pros traços finos dos caracteres.
+>>>>>>> 482a404a93b8b431c81c28e1caa87cd9ec93d222
 func prepararImagemParaOCR(imagemDecodificada image.Image) ([]byte, error) {
 	limites := imagemDecodificada.Bounds()
 	larguraOriginal := limites.Dx()
@@ -273,16 +361,22 @@ func prepararImagemParaOCR(imagemDecodificada image.Image) ([]byte, error) {
 		}
 	}
 
+<<<<<<< HEAD
 	imagemBinarizada := binarizarOtsu(imagemAmpliada)
 
 	var buffer bytes.Buffer
 	if err := png.Encode(&buffer, imagemBinarizada); err != nil {
+=======
+	var buffer bytes.Buffer
+	if err := png.Encode(&buffer, imagemAmpliada); err != nil {
+>>>>>>> 482a404a93b8b431c81c28e1caa87cd9ec93d222
 		return nil, err
 	}
 
 	return buffer.Bytes(), nil
 }
 
+<<<<<<< HEAD
 // binarizarOtsu converte uma imagem em escala de cinza pra preto e branco
 // puro, escolhendo automaticamente o limiar que melhor separa "texto" de
 // "fundo" (método de Otsu: maximiza a variância entre as duas classes de
@@ -347,6 +441,8 @@ func binarizarOtsu(img *image.Gray) *image.Gray {
 	return resultado
 }
 
+=======
+>>>>>>> 482a404a93b8b431c81c28e1caa87cd9ec93d222
 // padraoNomeCodigo casa linhas como "LEITE INTEGRAL GODAM (Código: 22080 )".
 // (?m) trata cada linha do texto separadamente. Aceita pequenas variações
 // que o OCR costuma introduzir na palavra "Código" (0 no lugar do O, etc.)
@@ -401,6 +497,7 @@ var padraoItemComIndicadorImposto = regexp.MustCompile(
 	`(?mi)^\d{3}\s+(\d+)\s+(.+?)\s+(\S+?)[uU][nN]\s+\S+\s+([\d.,]+)\)?\s*$`,
 )
 
+<<<<<<< HEAD
 // padraoLinhaNaoProduto reconhece linhas de rodapé/totalização que às vezes
 // têm números parecidos o bastante com preço/quantidade pra confundir os
 // parsers de item — remover essas linhas antes de tentar interpretar deixa
@@ -415,6 +512,8 @@ func removerLinhasNaoProduto(texto string) string {
 	return padraoLinhaNaoProduto.ReplaceAllString(texto, "")
 }
 
+=======
+>>>>>>> 482a404a93b8b431c81c28e1caa87cd9ec93d222
 // interpretarTextoOCR tenta reconhecer, em ordem, os formatos conhecidos de
 // nota/cupom — cada rede/portal usa um layout diferente, então em vez de
 // uma tentativa só, tenta cada um até algum encontrar itens:
@@ -422,8 +521,11 @@ func removerLinhasNaoProduto(texto string) string {
 //  2. Cupom de papel com "qtd unidade x preço total"
 //  3. Cupom de papel com número do item + indicador de imposto
 func interpretarTextoOCR(texto string) []models.ProdXML {
+<<<<<<< HEAD
 	texto = removerLinhasNaoProduto(texto)
 
+=======
+>>>>>>> 482a404a93b8b431c81c28e1caa87cd9ec93d222
 	if produtos := interpretarFormatoTelaSefaz(texto); len(produtos) > 0 {
 		return produtos
 	}
@@ -433,6 +535,7 @@ func interpretarTextoOCR(texto string) []models.ProdXML {
 	return interpretarFormatoCupomComIndicadorImposto(texto)
 }
 
+<<<<<<< HEAD
 // interpretarFormatoTelaSefaz casa cada "nome + código" com a "quantidade +
 // unidade + valor" que aparece DEPOIS dele e ANTES do próximo nome (uma
 // janela de posição no texto) — o template da tela da SEFAZ sempre
@@ -458,10 +561,35 @@ func interpretarFormatoTelaSefaz(texto string) []models.ProdXML {
 
 	for i, nomeMatch := range nomesIdx {
 		nome := strings.TrimSpace(texto[nomeMatch[2]:nomeMatch[3]])
+=======
+// interpretarFormatoTelaSefaz casa cada "nome + código" (na ordem em que
+// aparecem no texto) com a "quantidade + unidade + valor" correspondente
+// (também na ordem em que aparecem) — o template da tela da SEFAZ sempre
+// intercala essas duas linhas por item, então parear PELA ORDEM de
+// aparição é mais confiável do que tentar casar tudo numa regex só, já que
+// o OCR quebra linha de forma imprevisível dependendo da imagem.
+func interpretarFormatoTelaSefaz(texto string) []models.ProdXML {
+	nomes := padraoNomeCodigo.FindAllStringSubmatch(texto, -1)
+	quantidades := padraoQuantidade.FindAllStringSubmatch(texto, -1)
+
+	// Se as contagens não baterem, o OCR deve ter engolido ou duplicado
+	// alguma linha — melhor devolver nada (interpretarTextoOCR cai pro
+	// formato de cupom de papel, e se esse também não achar nada, o
+	// handler cai no erro ErrOCRSemItens) do que arriscar parear um item
+	// com a quantidade errada silenciosamente.
+	if len(nomes) == 0 || len(nomes) != len(quantidades) {
+		return nil
+	}
+
+	produtos := make([]models.ProdXML, 0, len(nomes))
+	for i := range nomes {
+		nome := strings.TrimSpace(nomes[i][1])
+>>>>>>> 482a404a93b8b431c81c28e1caa87cd9ec93d222
 		if nome == "" {
 			continue
 		}
 
+<<<<<<< HEAD
 		inicioJanela := nomeMatch[1] // logo após o fim do match do nome
 		fimJanela := len(texto)
 		if i+1 < len(nomesIdx) {
@@ -499,6 +627,21 @@ func interpretarFormatoTelaSefaz(texto string) []models.ProdXML {
 		// nota inteira por causa de uma linha que o OCR engoliu.
 
 		produtos = append(produtos, item)
+=======
+		quantidadeLida := strings.ReplaceAll(strings.TrimSpace(quantidades[i][1]), "?", "")
+		if quantidadeLida == "" {
+			// O dígito sumiu do OCR — assume 1 (o mais comum em compras),
+			// e conta com a revisão manual pra corrigir se estiver errado.
+			quantidadeLida = "1"
+		}
+
+		produtos = append(produtos, models.ProdXML{
+			Nome:       nome,
+			Quantidade: paraNumeroDecimal(quantidadeLida),
+			Unidade:    normalizarUnidade(strings.TrimSpace(quantidades[i][2])),
+			ValorUnit:  paraNumeroDecimal(strings.TrimSpace(quantidades[i][3])),
+		})
+>>>>>>> 482a404a93b8b431c81c28e1caa87cd9ec93d222
 	}
 
 	return produtos

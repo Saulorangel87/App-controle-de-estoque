@@ -165,6 +165,7 @@ export async function importarNotaFiscalPorFoto(arquivo, token) {
   return resposta.json();
 }
 
+<<<<<<< HEAD
 // Importação via foto de cupom de papel físico — usa OCR na nuvem no
 // backend (OCR.space) em vez do Tesseract local, mesma mecânica de envio.
 export async function importarNotaFiscalPorFotoDePapel(arquivo, token) {
@@ -187,6 +188,8 @@ export async function importarNotaFiscalPorFotoDePapel(arquivo, token) {
   return resposta.json();
 }
 
+=======
+>>>>>>> 482a404a93b8b431c81c28e1caa87cd9ec93d222
 // Importação via QR Code (Fase 2) — envia a URL lida no QR Code da NFC-e
 // (colada ou capturada pela câmera) para o backend consultar na SEFAZ.
 // Diferente de importarNotaFiscal, aqui o corpo é JSON simples, não

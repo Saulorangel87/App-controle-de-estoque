@@ -178,6 +178,7 @@ App controle de estoque/
   desativado (`dominiosPermitidosNFCe` vazio + botão desabilitado no
   frontend), caso algum estado sem esse tipo de proteção seja avaliado no
   futuro. Upload de XML (Fase 1) continua sendo o único caminho funcional
+<<<<<<< HEAD
 - **Importação de nota fiscal (Fase 3 — OCR de foto/print)**: dois motores
   diferentes, escolhidos pelo usuário na tela de importação:
   - **Print da tela da SEFAZ** → Tesseract local (`services/ocr_nota.go`),
@@ -198,6 +199,8 @@ App controle de estoque/
   - Os dois caminhos reaproveitam o MESMO parser de texto
     (`interpretarTextoOCR`) — a diferença entre eles é só a qualidade do
     texto de entrada, não a lógica de extrair produtos dele
+=======
+>>>>>>> 482a404a93b8b431c81c28e1caa87cd9ec93d222
 - Código comentado, com cuidados de acessibilidade (labels, foco visível,
   aria-live, aria-modal) e performance (sem fontes externas, sem libs de UI pesadas)
 
@@ -226,9 +229,14 @@ App controle de estoque/
   investir nisso se outro estado (UF) relevante pro uso do app não tiver
   esse tipo de proteção na consulta pública — precisa avaliar antes de
   reativar `dominiosPermitidosNFCe`
+<<<<<<< HEAD
 - **Deploy em produção precisa de `OCR_SPACE_API_KEY`** configurada (ver
   Fase 3 acima) pra "foto de cupom de papel" funcionar — sem isso, essa
   opção específica fica indisponível (mas não quebra o resto do app)
+=======
+  e Fase 3 (foto/OCR, exige serviço de OCR pago ou self-hosted com menor
+  precisão)
+>>>>>>> 482a404a93b8b431c81c28e1caa87cd9ec93d222
 - Avaliar se o rate limiting por IP (não por conta) causa fricção real no
   uso — hoje, várias contas na mesma rede/IP podem ser bloqueadas juntas se
   uma errar demais

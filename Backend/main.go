@@ -45,6 +45,7 @@ func main() {
 	// "importar-qrcode" (Fase 2, desativada — ver services/nfce_scraper.go)
 	// devolvem a mesma prévia — "confirmar" é compartilhado pelos fluxos.
 	// Todas exigem login.
+<<<<<<< HEAD
 	// Importação de nota fiscal. "importar" (Fase 1, via upload de XML),
 	// "importar-foto" (Fase 3, via Tesseract local — melhor pra print de
 	// tela), "importar-foto-papel" (Fase 3b, via OCR na nuvem — melhor pra
@@ -54,6 +55,10 @@ func main() {
 	mux.HandleFunc("POST /notas-fiscais/importar", middleware.Autenticar(handlers.ImportarNotaFiscal))
 	mux.HandleFunc("POST /notas-fiscais/importar-foto", middleware.Autenticar(handlers.ImportarNotaFiscalPorFoto))
 	mux.HandleFunc("POST /notas-fiscais/importar-foto-papel", middleware.Autenticar(handlers.ImportarNotaFiscalPorFotoDePapel))
+=======
+	mux.HandleFunc("POST /notas-fiscais/importar", middleware.Autenticar(handlers.ImportarNotaFiscal))
+	mux.HandleFunc("POST /notas-fiscais/importar-foto", middleware.Autenticar(handlers.ImportarNotaFiscalPorFoto))
+>>>>>>> 482a404a93b8b431c81c28e1caa87cd9ec93d222
 	mux.HandleFunc("POST /notas-fiscais/importar-qrcode", middleware.Autenticar(handlers.ImportarNotaFiscalPorQRCode))
 	mux.HandleFunc("POST /notas-fiscais/confirmar", middleware.Autenticar(handlers.ConfirmarImportacao))
 

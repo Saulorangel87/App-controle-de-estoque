@@ -2,7 +2,10 @@ import { useState, useRef } from "react";
 import {
   importarNotaFiscal,
   importarNotaFiscalPorFoto,
+<<<<<<< HEAD
   importarNotaFiscalPorFotoDePapel,
+=======
+>>>>>>> 482a404a93b8b431c81c28e1caa87cd9ec93d222
   importarNotaFiscalPorQRCode,
   confirmarImportacaoNota,
 } from "../api/api.js";
@@ -12,17 +15,23 @@ import LeitorQRCode from "./LeitorQRCode.jsx";
 // Passos desse fluxo: escolher a forma de entrada, o passo específico de
 // cada uma, conferir os itens interpretados (e ajustar o que a comparação
 // automática não resolveu sozinha), e um resumo final depois de aplicar.
+<<<<<<< HEAD
 //
 // FOTO (print da tela da SEFAZ) e FOTOPAPEL (foto do cupom físico) são
 // telas separadas de propósito, mesmo parecendo repetitivas — usam
 // endpoints e motores de OCR diferentes por baixo (Tesseract local pro
 // print, que já funciona bem; API na nuvem pra foto de papel, que precisa
 // de um motor mais robusto pra lidar com ângulo/iluminação/papel térmico).
+=======
+>>>>>>> 482a404a93b8b431c81c28e1caa87cd9ec93d222
 const PASSOS = {
   ESCOLHA: "escolha",
   UPLOAD: "upload",
   FOTO: "foto",
+<<<<<<< HEAD
   FOTOPAPEL: "fotopapel",
+=======
+>>>>>>> 482a404a93b8b431c81c28e1caa87cd9ec93d222
   QRCODE: "qrcode",
   REVISAO: "revisao",
   SUCESSO: "sucesso",
@@ -38,7 +47,10 @@ export default function ModalImportarNota({ token, itensEstoque, aoFechar, aoCon
   const [usarCamera, setUsarCamera] = useState(true);
   const inputArquivoRef = useRef(null);
   const inputFotoRef = useRef(null);
+<<<<<<< HEAD
   const inputFotoPapelRef = useRef(null);
+=======
+>>>>>>> 482a404a93b8b431c81c28e1caa87cd9ec93d222
 
 
   // Transforma a prévia recebida do backend (mesmo formato pros dois
@@ -77,6 +89,7 @@ export default function ModalImportarNota({ token, itensEstoque, aoFechar, aoCon
     }
   }
 
+<<<<<<< HEAD
   async function aoEnviarFotoPapel(evento) {
     evento.preventDefault();
     const arquivo = inputFotoPapelRef.current?.files?.[0];
@@ -101,6 +114,8 @@ export default function ModalImportarNota({ token, itensEstoque, aoFechar, aoCon
     }
   }
 
+=======
+>>>>>>> 482a404a93b8b431c81c28e1caa87cd9ec93d222
   async function aoProcessarQRCode(urlNota) {
     const url = urlNota.trim();
     if (!url) {
@@ -247,6 +262,7 @@ export default function ModalImportarNota({ token, itensEstoque, aoFechar, aoCon
                 style={{ textAlign: "left", padding: "14px" }}
                 onClick={() => setPasso(PASSOS.FOTO)}
               >
+<<<<<<< HEAD
                 <strong>Enviar print da tela da SEFAZ</strong>
                 <br />
                 <span style={{ fontSize: "13px", fontWeight: 400 }}>
@@ -265,6 +281,14 @@ export default function ModalImportarNota({ token, itensEstoque, aoFechar, aoCon
                 <span style={{ fontSize: "13px", fontWeight: 400 }}>
                   Foto do cupom físico impresso — leva alguns segundos a
                   mais (usa um serviço externo de leitura de imagem).
+=======
+                <strong>Enviar foto ou print da nota</strong>
+                <br />
+                <span style={{ fontSize: "13px", fontWeight: 400 }}>
+                  Um print da tela de confirmação da SEFAZ funciona melhor
+                  que foto do cupom de papel — o app lê os itens
+                  automaticamente (revise antes de confirmar).
+>>>>>>> 482a404a93b8b431c81c28e1caa87cd9ec93d222
                 </span>
               </button>
               <button
@@ -292,14 +316,24 @@ export default function ModalImportarNota({ token, itensEstoque, aoFechar, aoCon
         {passo === PASSOS.FOTO && (
           <form onSubmit={aoEnviarFoto}>
             <p className="subtitulo" style={{ marginBottom: "12px" }}>
+<<<<<<< HEAD
               Envie o print da tela de confirmação da SEFAZ. O app lê o
               texto da imagem automaticamente (OCR) — revise os itens antes
               de confirmar, já que a leitura pode errar em imagens de baixa
+=======
+              Envie uma foto ou print da nota fiscal. O app lê o texto da
+              imagem automaticamente (OCR) — revise os itens antes de
+              confirmar, já que a leitura pode errar em imagens de baixa
+>>>>>>> 482a404a93b8b431c81c28e1caa87cd9ec93d222
               qualidade.
             </p>
 
             <div className="campo-formulario">
+<<<<<<< HEAD
               <label htmlFor="foto-nota">Print da tela</label>
+=======
+              <label htmlFor="foto-nota">Foto ou print</label>
+>>>>>>> 482a404a93b8b431c81c28e1caa87cd9ec93d222
               <input
                 id="foto-nota"
                 type="file"
@@ -324,6 +358,7 @@ export default function ModalImportarNota({ token, itensEstoque, aoFechar, aoCon
           </form>
         )}
 
+<<<<<<< HEAD
         {passo === PASSOS.FOTOPAPEL && (
           <form onSubmit={aoEnviarFotoPapel}>
             <p className="subtitulo" style={{ marginBottom: "12px" }}>
@@ -359,6 +394,8 @@ export default function ModalImportarNota({ token, itensEstoque, aoFechar, aoCon
           </form>
         )}
 
+=======
+>>>>>>> 482a404a93b8b431c81c28e1caa87cd9ec93d222
         {passo === PASSOS.QRCODE && (
           <>
             <p className="subtitulo" style={{ marginBottom: "12px" }}>
