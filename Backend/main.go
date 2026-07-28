@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"controle-estoque/database"
 	"controle-estoque/handlers"
@@ -57,8 +58,23 @@ func main() {
 	mux.HandleFunc("POST /notas-fiscais/importar-qrcode", middleware.Autenticar(handlers.ImportarNotaFiscalPorQRCode))
 	mux.HandleFunc("POST /notas-fiscais/confirmar", middleware.Autenticar(handlers.ConfirmarImportacao))
 
+	// Timeouts explícitos em vez de usar os defaults do net/http (que são
+	// SEM LIMITE — uma conexão travada ou muito lenta ficaria presa
+	// indefinidamente do lado do Go, mesmo que algum proxy no meio do
+	// caminho já tenha desistido dela há muito tempo). WriteTimeout um
+	// pouco generoso porque o fluxo de OCR na nuvem (foto de papel) chama
+	// uma API externa, que pode legitimamente levar alguns segundos.
+	servidor := &http.Server{
+		Addr:              ":8080",
+		Handler:           corsMiddleware(mux),
+		ReadTimeout:       30 * time.Second,
+		ReadHeaderTimeout: 10 * time.Second,
+		WriteTimeout:      45 * time.Second,
+		IdleTimeout:       120 * time.Second,
+	}
+
 	log.Println("servidor rodando na porta 8080")
-	if err := http.ListenAndServe(":8080", corsMiddleware(mux)); err != nil {
+	if err := servidor.ListenAndServe(); err != nil {
 		log.Fatal(err)
 	}
 }

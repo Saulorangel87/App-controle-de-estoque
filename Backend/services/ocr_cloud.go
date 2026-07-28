@@ -124,7 +124,12 @@ func chamarOCRSpace(imagem []byte, apiKey string) (string, error) {
 
 	// Timeout generoso — OCR na nuvem de uma imagem pode levar alguns
 	// segundos, principalmente em fotos grandes.
-	cliente := &http.Client{Timeout: 60 * time.Second}
+	// Timeout mais curto que o normal de propósito: melhor o NOSSO código
+	// desistir com uma mensagem clara em ~25s do que deixar o Cloudflare
+	// Tunnel (ou outro proxy no meio do caminho) derrubar a conexão sem
+	// aviso depois de esperar mais tempo — isso aparece no navegador como
+	// "Failed to fetch", sem nenhuma mensagem útil pro usuário.
+	cliente := &http.Client{Timeout: 25 * time.Second}
 	resposta, err := cliente.Do(requisicao)
 	if err != nil {
 		return "", fmt.Errorf("%w: %v", ErrOCRCloudFalhou, err)
