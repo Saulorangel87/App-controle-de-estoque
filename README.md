@@ -94,26 +94,44 @@ public/
 Última medição no PageSpeed Insights: Desempenho 98, Acessibilidade 95,
 Práticas recomendadas 100, SEO 100, Navegação agêntica 3/3.
 
-## Importação de nota fiscal (Fase 1)
+## Importação de nota fiscal
 
-Em vez de cadastrar item por item manualmente, dá para importar o XML de uma
-NF-e (nota fiscal eletrônica) direto no botão **"Importar nota"** do
-dashboard. O fluxo:
+Em vez de cadastrar item por item manualmente, dá para importar uma compra
+inteira de uma vez pelo botão **"Importar nota"** do dashboard. O fluxo é o
+mesmo pra qualquer uma das formas de entrada abaixo:
 
-1. Envia o arquivo `.xml`
-2. O backend lê os itens da nota e compara com o estoque atual por nome
-   (comparação exata + uma heurística de substring, para pegar nomes
-   parecidos como "Peito de Frango Resfriado" batendo com "Peito de Frango")
+1. Envia a nota (arquivo XML, print de tela ou foto do cupom, dependendo da
+   opção escolhida)
+2. O backend lê os itens e compara com o estoque atual por nome (comparação
+   exata + uma heurística de substring, pra pegar nomes parecidos como
+   "Peito de Frango Resfriado" batendo com "Peito de Frango")
 3. Uma tela de conferência mostra cada item como **Encontrado** (vai somar
    quantidade) ou **Novo item** (vai cadastrar) — nada é salvo ainda nesse
-   ponto, e dá para corrigir manualmente qualquer associação que a
+   ponto, e dá pra corrigir manualmente qualquer associação que a
    comparação automática não acertou
 4. Só depois de confirmar é que o estoque é atualizado de fato
 
-**Limitação atual**: só aceita o XML da nota (não PDF nem foto). É de
-propósito — o XML é a fonte mais confiável, sem depender de OCR. Ler PDF da
-DANFE ou foto do cupom são possibilidades futuras, mas exigem OCR, que é bem
-menos preciso nesse tipo de documento (e, no caso de OCR em nuvem, tem custo).
+Três formas de entrada disponíveis hoje:
+
+- **Arquivo XML da NF-e** — o caminho mais confiável, sem depender de OCR.
+  Sempre a primeira opção se você tiver o XML salvo.
+- **Print da tela de confirmação da SEFAZ** — depois de escanear o QR Code
+  da nota no navegador, um print dessa tela é lido via OCR local (Tesseract,
+  de graça, sem dependência externa) — funciona bem, já que é texto digital
+  nítido.
+- **Foto do cupom de papel físico** — lida via OCR numa API de nuvem
+  (OCR.space), motor mais robusto pra lidar com ângulo, iluminação e papel
+  térmico desbotado do que o Tesseract local (testado e confirmado: foto
+  real de cupom é bem mais difícil que print de tela pra qualquer OCR).
+  Precisa de uma chave de API configurada no backend (grátis, sem cartão) —
+  detalhes em `NOTAS-DEPLOY.md`. Precisão ainda inconsistente em papel real,
+  a tela de conferência é quem garante a correção final.
+
+**Leitura por QR Code direto (sem print manual) está desativada de
+propósito**: a consulta pública da SEFAZ-RJ exige reCAPTCHA v3 e proteção
+anti-bot corporativa, que não é seguro nem confiável de automatizar via
+scraping. Detalhes completos (e o porquê de cada decisão de OCR) em
+`NOTAS-DEPLOY.md`.
 
 ## Licença
 

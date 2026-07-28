@@ -5,9 +5,11 @@ import (
 	"encoding/xml"
 	"errors"
 	"io"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"controle-estoque/config"
 	"controle-estoque/database"
@@ -113,14 +115,18 @@ func ImportarNotaFiscalPorFoto(w http.ResponseWriter, r *http.Request) {
 // binarização). Print de tela continua indo pelo endpoint de cima.
 func ImportarNotaFiscalPorFotoDePapel(w http.ResponseWriter, r *http.Request) {
 	usuarioID := r.Context().Value(middleware.UsuarioIDContexto).(int)
+	inicio := time.Now()
+	log.Printf("[foto-papel] requisição recebida (usuário %d)", usuarioID)
 
 	if err := r.ParseMultipartForm(tamanhoMaximoUpload); err != nil {
+		log.Printf("[foto-papel] erro ao ler multipart: %v", err)
 		http.Error(w, "imagem inválida ou muito grande (máximo 10MB)", http.StatusBadRequest)
 		return
 	}
 
 	arquivo, _, err := r.FormFile("arquivo")
 	if err != nil {
+		log.Printf("[foto-papel] campo 'arquivo' ausente: %v", err)
 		http.Error(w, "envie a foto da nota no campo 'arquivo'", http.StatusBadRequest)
 		return
 	}
@@ -128,11 +134,14 @@ func ImportarNotaFiscalPorFotoDePapel(w http.ResponseWriter, r *http.Request) {
 
 	conteudo, err := io.ReadAll(arquivo)
 	if err != nil {
+		log.Printf("[foto-papel] erro ao ler bytes da imagem: %v", err)
 		http.Error(w, "erro ao ler a imagem", http.StatusInternalServerError)
 		return
 	}
+	log.Printf("[foto-papel] imagem recebida: %d KB — chamando OCR.space...", len(conteudo)/1024)
 
 	produtos, err := services.ExtrairProdutosDeImagemViaOCRSpace(conteudo, config.ChaveOCRSpace())
+	log.Printf("[foto-papel] OCR.space respondeu em %v (erro: %v, itens: %d)", time.Since(inicio), err, len(produtos))
 	if err != nil {
 		status := http.StatusBadGateway
 		if errors.Is(err, services.ErrOCRCloudSemChave) {

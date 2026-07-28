@@ -1,6 +1,6 @@
 # Notas — Controle de Estoque
 
-**Versão atual: v1.3.0 (em preparo)** · Em produção: https://estoque.devsaulo.com.br · Licença MIT
+**Versão atual: v1.4.0** · Em produção: https://estoque.devsaulo.com.br · Licença MIT
 
 ## Stack
 - Backend: Go (net/http puro), SQLite (modernc.org/sqlite), bcrypt + JWT
@@ -113,16 +113,21 @@ App controle de estoque/
 - **Deploy em produção precisa de `OCR_SPACE_API_KEY`** configurada (ver
   Fase 3 acima) pra "foto de cupom de papel" funcionar — sem isso, essa
   opção específica fica indisponível (mas não quebra o resto do app)
-- **"Failed to fetch" na foto de cupom de papel, testado pelo celular**:
-  aconteceu mesmo com imagem <1MB — como é a única rota que chama uma API
-  externa (OCR.space), suspeita é timeout de algum intermediário
-  (Cloudflare Tunnel) derrubando a conexão antes da resposta voltar.
-  Mitigado por enquanto: timeout do cliente HTTP reduzido de 60s pra 25s
-  (falha rápido com mensagem clara em vez de ficar esperando) e o servidor
-  Go passou a ter timeouts explícitos (`ReadTimeout`/`WriteTimeout`, antes
-  usava o default do net/http, que é sem limite nenhum). Precisa validar
-  se isso resolveu, ou se o timeout do lado do Cloudflare Tunnel/proxy é
-  mais curto que os 25s e precisa ser ajustado lá também
+- **"Failed to fetch" na foto de cupom de papel**: reproduzido tanto no
+  celular quanto no Chrome desktop (Windows), então não é só rede móvel —
+  aponta mais pro Cloudflare Tunnel ou pro tempo real de processamento do
+  OCR.space. Diagnóstico até agora:
+  - Timeout do cliente HTTP reduzido de 60s pra 25s, e o servidor Go
+    passou a ter timeouts explícitos (antes usava o default do net/http,
+    que é sem limite) — mitigação aplicada, ainda não confirmada como
+    solução definitiva
+  - `curl` direto da VM pro OCR.space respondeu em <1s → conectividade de
+    saída da VM está OK, não é bloqueio de rede/firewall
+  - Faltava log por requisição no handler `ImportarNotaFiscalPorFotoDePapel`
+    pra saber se a chamada trava esperando o OCR.space ou se o Cloudflare
+    corta antes disso — **adicionado nesta versão** (prefixo `[foto-papel]`
+    nos logs, ver `docker logs estoque-backend`). Próximo passo: reproduzir
+    o erro e ler esse log pra confirmar onde exatamente trava
 - **Precisão do OCR.space em foto de cupom de papel real ainda inconsistente**
   (5 de 10 itens numa nota) — pode precisar de mais ajuste no
   pré-processamento de imagem específico pra esse provedor, ou aceitar que
