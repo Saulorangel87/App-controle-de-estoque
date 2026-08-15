@@ -1,0 +1,60 @@
+# Workflow de CI/CD do Controle de Estoque
+# Roda automaticamente a cada push na branch main.
+# Fase 1 (build-and-test) = CI: garante que backend e frontend buildam sem erro.
+# Fase 2 (deploy)         = CD: se a Fase 1 passar, conecta na VM e atualiza o container.
+
+name: Deploy Controle de Estoque
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  # ---------- CI: build e checagem, sem tocar em produção ----------
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar o código do repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.5" # confirmado no go.mod do projeto
+
+      - name: Buildar e checar o backend (Go)
+        working-directory: ./Backend # ajuste se a pasta tiver outro nome
+        run: |
+          go build ./...
+          go vet ./...
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: ./Frontend/package-lock.json
+
+      - name: Instalar dependências e buildar o frontend (React)
+        working-directory: ./Frontend # ajuste se a pasta tiver outro nome
+        run: |
+          npm ci
+          npm run build
+
+  # ---------- CD: só roda se a CI acima passar ----------
+  deploy:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Conectar na Oracle Cloud via SSH e atualizar o container
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          # se você usa uma porta SSH diferente da 22, adicione:
+          # port: ${{ secrets.SSH_PORT }}
+          script: |
+            cd ~/apps/App-controle-de-estoque
+            git pull
+            sudo docker compose up -d --build
