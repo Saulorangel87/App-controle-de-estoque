@@ -315,7 +315,7 @@ status, os arquivos afetados e as validações executadas.
   - [x] autenticação e claims JWT;
   - [x] isolamento entre usuários;
   - [x] validação de quantidades e locais;
-  - [ ] retirada concorrente;
+  - [x] retirada concorrente;
   - [x] transação/idempotência de nota;
   - [x] limite/validação de URLs SSRF;
   - [x] limite de dimensão de imagens OCR;
@@ -328,7 +328,7 @@ status, os arquivos afetados e as validações executadas.
   troca de senha, dados de estoque, importação transacional/idempotente,
   isolamento entre usuários e allowlist HTTPS. `go test ./...`,
   `go vet ./...` e `git diff --check` passaram em 17/09/2026. A cobertura de
-  integração de concorrência, limite de uploads e frontend ainda precisa ser ampliada.
+  limite de uploads e frontend ainda precisa ser ampliada.
 
 ## Ordem de implementação proposta
 
@@ -367,6 +367,7 @@ status, os arquivos afetados e as validações executadas.
 | 17/09/2026 | P14 | Confirmação de exclusão reforçada com cancelamento por Esc e bloqueio contra duplo clique | Revisão do fluxo; build frontend pendente |
 | 17/09/2026 | P13 | Testes de importação cobrem idempotência, rollback e isolamento entre usuários | `go test ./...`, `go vet ./...`, `git diff --check` |
 | 17/09/2026 | P13 | Testes cobrem limite de dimensão para imagens OCR | `go test ./...`, `go vet ./...`, `git diff --check` |
+| 17/09/2026 | P13 | Teste concorrente cobre duas retiradas sem perda ou estoque negativo | `go test ./... -count=5`, `go vet ./...`, `git diff --check` |
 
 ## Registro de decisões e riscos aceitos
 
