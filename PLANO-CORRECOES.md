@@ -298,9 +298,10 @@ status, os arquivos afetados e as validações executadas.
 - **Evidência parcial:** Dockerfile passou de `npm install` para `npm ci`; o
   workflow recebeu permissões mínimas de leitura, timeout, concorrência, pull
   fast-forward-only, espera de prontidão e probes pós-deploy. `git diff
-  --check` passou em 17/09/2026. A execução #15 confirmou o deploy privado;
+  --check` passou em 17/09/2026. As execuções #15 e #16 confirmaram o deploy privado;
   as actions foram atualizadas para runtime Node 24, o cache Go foi apontado
-  para `Backend/go.sum` e o runner foi fixado em Ubuntu 24.04.
+  para `Backend/go.sum` e o runner foi fixado em Ubuntu 24.04, sem o aviso de
+  migração do `ubuntu-latest`.
 
 #### P12-A. Acesso privado da VPS via Tailscale
 
@@ -421,6 +422,8 @@ status, os arquivos afetados e as validações executadas.
 | 17/09/2026 | P12 | Execução #15 confirmou build e deploy após as actions fixadas; avisos de Node.js e cache Go não reapareceram | GitHub Actions #15; `build-and-test` 58s e `deploy` 17s |
 | 17/09/2026 | P12 | Runner fixado em `ubuntu-24.04`; o aviso de migração automática do `ubuntu-latest` será eliminado na próxima execução | `.github/workflows/deploy.yml`; validação no próximo CI |
 | 17/09/2026 | P12-A | Execução #15 confirmou Tailscale, SSH privado, fingerprint e smoke tests; permanece o aviso de depreciação do parâmetro `authkey` | GitHub Actions #15; status `Success` em 1m55s |
+| 17/09/2026 | P12 | Execução #16 confirmou o runner `ubuntu-24.04`; o aviso de migração do `ubuntu-latest` não reapareceu | GitHub Actions #16; status `Success` em 1m19s |
+| 17/09/2026 | P12-A | Execução #16 confirmou novamente Tailscale, SSH privado, fingerprint e smoke tests; permanece somente o aviso de depreciação do `authkey` | GitHub Actions #16; job `deploy` concluído em 15s |
 
 ## Registro de decisões e riscos aceitos
 
