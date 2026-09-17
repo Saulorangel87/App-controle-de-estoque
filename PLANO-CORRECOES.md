@@ -305,8 +305,8 @@ status, os arquivos afetados e as validações executadas.
 
 #### P12-A. Acesso privado da VPS via Tailscale
 
-- **Status:** Em andamento — acesso privado e deploy validados; falta migrar a
-  autenticação para OAuth com tag/política específica.
+- **Status:** Em andamento — acesso privado e deploy validados; tag e credencial
+  OAuth criadas; falta cadastrar os secrets e validar a troca no workflow.
 - **Constatação:** o IP informado (`100.67.151.30`) é um endereço Tailscale.
   O workflow anterior usava runner GitHub hospedado e SSH direto, sem conectar
   o runner ao tailnet; por isso não funcionaria com a porta 22 pública fechada.
@@ -319,8 +319,13 @@ status, os arquivos afetados e as validações executadas.
   - [x] manter SSH na porta 22 privada;
   - [x] criar/configurar `TAILSCALE_AUTHKEY`, `VPS_HOST`, `VPS_USER`,
     `VPS_SSH_KEY` e `VPS_HOST_FINGERPRINT` no ambiente protegido;
-  - [ ] migrar de `authkey` para OAuth client com tag/política exclusiva do
-    runner, permitindo acesso somente à VPS e à porta 22;
+  - [x] criar a tag `tag:github-actions` com `autogroup:admin` como proprietário;
+  - [x] criar credencial OAuth exclusiva para o deploy, com apenas
+    `auth_keys: Write` e tag `tag:github-actions`;
+  - [ ] cadastrar `TAILSCALE_OAUTH_CLIENT_ID` e `TAILSCALE_OAUTH_SECRET` no
+    ambiente `production`;
+  - [ ] migrar o workflow de `authkey` para OAuth client com a tag exclusiva do
+    runner, mantendo o acesso privado à VPS pela porta 22;
   - [x] usar auth key reutilizável e efêmera, adequada a runners descartáveis do GitHub Actions;
   - [x] executar workflow e confirmar smoke tests sem abrir a porta 22 pública;
   - [x] trocar o disparo automático por `workflow_dispatch`;
@@ -424,6 +429,7 @@ status, os arquivos afetados e as validações executadas.
 | 17/09/2026 | P12-A | Execução #15 confirmou Tailscale, SSH privado, fingerprint e smoke tests; permanece o aviso de depreciação do parâmetro `authkey` | GitHub Actions #15; status `Success` em 1m55s |
 | 17/09/2026 | P12 | Execução #16 confirmou o runner `ubuntu-24.04`; o aviso de migração do `ubuntu-latest` não reapareceu | GitHub Actions #16; status `Success` em 1m19s |
 | 17/09/2026 | P12-A | Execução #16 confirmou novamente Tailscale, SSH privado, fingerprint e smoke tests; permanece somente o aviso de depreciação do `authkey` | GitHub Actions #16; job `deploy` concluído em 15s |
+| 17/09/2026 | P12-A | Tag `tag:github-actions` criada; credencial OAuth perdida revogada e nova credencial gerada com escopo mínimo `auth_keys: Write`; segredos não registrados no projeto | Console Tailscale; cadastro dos secrets e validação do workflow pendentes |
 
 ## Registro de decisões e riscos aceitos
 
