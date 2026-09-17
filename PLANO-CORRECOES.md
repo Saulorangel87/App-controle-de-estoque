@@ -182,14 +182,21 @@ status, os arquivos afetados e as validações executadas.
 
 ### P9. Remover debug sensível de produção
 
-- **Status:** Pendente.
+- **Status:** Concluído — gravação permanece disponível somente por flag explícita.
 - **Arquivos previstos:** `Backend/services/ocr_nota.go`,
   `Backend/services/nfce_scraper.go`, configuração e `.gitignore`.
-- **Ações:** remover gravações automáticas ou protegê-las por flag explícita de
-  desenvolvimento; usar diretório temporário seguro e retenção controlada;
-  revisar permissões dos arquivos existentes no servidor.
+- **Ações:**
+  - [x] remover gravações automáticas por padrão;
+  - [x] proteger a gravação por `DEBUG_OCR=true` explícito;
+  - [x] usar permissão `0600` para os arquivos quando o debug for habilitado;
+  - [ ] usar diretório temporário seguro e retenção controlada;
+  - [ ] revisar/remover arquivos existentes no servidor.
 - **Critérios de aceite:** produção não grava texto OCR, HTML de nota ou conteúdo
   fiscal sem configuração explícita e auditável.
+- **Evidência:** `DebugOCRAtivo()` retorna falso por padrão e protege os dois
+  pontos de gravação (`debug_ocr_ultimo_texto.txt` e
+  `debug_nfce_ultima_consulta.html`). `go test ./...`, `go vet ./...` e
+  `git diff --check` passaram em 17/09/2026.
 
 ### P10. Manter consulta QR Code segura antes de reativar
 
@@ -283,6 +290,7 @@ status, os arquivos afetados e as validações executadas.
 | 17/09/2026 | P2 | Rate limit aplicado à pergunta e validação de senha adicionada no backend | `go test ./...`, `go vet ./...`, `git diff --check` |
 | 17/09/2026 | P3 | Rate limit deixou de confiar em cabeçalhos de IP não verificados | `go test ./...`, `go vet ./...`, `git diff --check` |
 | 17/09/2026 | P8 | Uploads e processamento OCR passaram a ter limites de corpo, imagem, concorrência e resposta | `go test ./...`, `go vet ./...`, `git diff --check` |
+| 17/09/2026 | P9 | Debug de OCR/NFC-e desativado por padrão e protegido por flag | `go test ./...`, `go vet ./...`, `git diff --check` |
 
 ## Registro de decisões e riscos aceitos
 

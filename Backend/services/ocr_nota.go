@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"controle-estoque/config"
 	"controle-estoque/models"
 )
 
@@ -168,7 +169,10 @@ func finalizarExtracao(texto string, produtos []models.ProdXML) ([]models.ProdXM
 // depuração enquanto ajustamos o parser — falha em salvar é ignorada de
 // propósito, nunca deve quebrar a resposta ao usuário.
 func salvarDebugOCR(texto string) {
-	_ = os.WriteFile("debug_ocr_ultimo_texto.txt", []byte(texto), 0o644)
+	if !config.DebugOCRAtivo() {
+		return
+	}
+	_ = os.WriteFile("debug_ocr_ultimo_texto.txt", []byte(texto), 0o600)
 }
 
 // rodarOCR salva a imagem (já pré-processada) num arquivo temporário e

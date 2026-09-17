@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"controle-estoque/config"
 	"github.com/PuerkitoBio/goquery"
 
 	"controle-estoque/models"
@@ -145,7 +146,10 @@ func buscarDocumento(urlNota string) (*goquery.Document, error) {
 // enquanto ajustamos o parser — não afeta o funcionamento normal do app
 // (falha em salvar é ignorada de propósito, nunca deve quebrar a consulta).
 func salvarHTMLDebug(html []byte) {
-	_ = os.WriteFile("debug_nfce_ultima_consulta.html", html, 0o644)
+	if !config.DebugOCRAtivo() {
+		return
+	}
+	_ = os.WriteFile("debug_nfce_ultima_consulta.html", html, 0o600)
 }
 
 // padrãoValorMonetario reconhece números no formato brasileiro (vírgula
