@@ -162,19 +162,23 @@ status, os arquivos afetados e as validações executadas.
 
 ### P8. Limitar efetivamente uploads e processamento
 
-- **Status:** Pendente.
+- **Status:** Concluído — validação funcional com imagens reais permanece recomendada.
 - **Arquivos previstos:** `Backend/main.go`,
   `Backend/handlers/notas_fiscais.go`, `Backend/services/ocr_nota.go` e
   `Backend/services/ocr_cloud.go`.
 - **Ações:**
-  - aplicar `http.MaxBytesReader` no corpo da requisição;
-  - validar MIME e formato real do arquivo;
-  - limitar dimensões de imagem antes de ampliar/processar;
-  - limitar número de OCRs simultâneos por usuário/servidor;
-  - limitar tamanho da resposta do OCR.space;
-  - padronizar timeouts e mensagens sem expor detalhes internos.
+  - [x] aplicar `http.MaxBytesReader` no corpo das requisições multipart;
+  - [x] validar o formato real e aceitar somente JPEG/PNG nos fluxos de imagem;
+  - [x] limitar dimensões a 6000 px por lado e 12 milhões de pixels;
+  - [x] limitar a duas leituras OCR simultâneas, rejeitando espera acima de 5 segundos;
+  - [x] limitar a resposta do OCR.space a 2 MB;
+  - [x] manter timeouts e mensagens sem expor detalhes internos.
 - **Critérios de aceite:** corpo acima do limite é rejeitado cedo; imagem com
   dimensões abusivas não causa consumo excessivo; concorrência é controlada.
+- **Evidência:** os três endpoints multipart usam `MaxBytesReader`; os fluxos
+  de imagem passam por `ValidarImagem`; Tesseract e OCR.space compartilham um
+  limite de concorrência; a resposta externa é limitada por `io.LimitReader`.
+  `go test ./...`, `go vet ./...` e `git diff --check` passaram em 17/09/2026.
 
 ### P9. Remover debug sensível de produção
 
@@ -278,6 +282,7 @@ status, os arquivos afetados e as validações executadas.
 | 17/09/2026 | P7 | Confirmação de nota transacional, com rollback e idempotência por usuário | `go test ./...`, `go vet ./...`; build frontend bloqueado pelo ambiente |
 | 17/09/2026 | P2 | Rate limit aplicado à pergunta e validação de senha adicionada no backend | `go test ./...`, `go vet ./...`, `git diff --check` |
 | 17/09/2026 | P3 | Rate limit deixou de confiar em cabeçalhos de IP não verificados | `go test ./...`, `go vet ./...`, `git diff --check` |
+| 17/09/2026 | P8 | Uploads e processamento OCR passaram a ter limites de corpo, imagem, concorrência e resposta | `go test ./...`, `go vet ./...`, `git diff --check` |
 
 ## Registro de decisões e riscos aceitos
 

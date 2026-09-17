@@ -35,6 +35,7 @@ const (
 func ImportarNotaFiscal(w http.ResponseWriter, r *http.Request) {
 	usuarioID := r.Context().Value(middleware.UsuarioIDContexto).(int)
 
+	r.Body = http.MaxBytesReader(w, r.Body, tamanhoMaximoUpload)
 	if err := r.ParseMultipartForm(tamanhoMaximoUpload); err != nil {
 		http.Error(w, "arquivo inválido ou muito grande (máximo 10MB)", http.StatusBadRequest)
 		return
@@ -80,6 +81,7 @@ func ImportarNotaFiscal(w http.ResponseWriter, r *http.Request) {
 func ImportarNotaFiscalPorFoto(w http.ResponseWriter, r *http.Request) {
 	usuarioID := r.Context().Value(middleware.UsuarioIDContexto).(int)
 
+	r.Body = http.MaxBytesReader(w, r.Body, tamanhoMaximoUpload)
 	if err := r.ParseMultipartForm(tamanhoMaximoUpload); err != nil {
 		http.Error(w, "imagem inválida ou muito grande (máximo 10MB)", http.StatusBadRequest)
 		return
@@ -95,6 +97,10 @@ func ImportarNotaFiscalPorFoto(w http.ResponseWriter, r *http.Request) {
 	conteudo, err := io.ReadAll(arquivo)
 	if err != nil {
 		http.Error(w, "erro ao ler a imagem", http.StatusInternalServerError)
+		return
+	}
+	if err := services.ValidarImagem(conteudo); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -123,6 +129,7 @@ func ImportarNotaFiscalPorFotoDePapel(w http.ResponseWriter, r *http.Request) {
 	inicio := time.Now()
 	log.Printf("[foto-papel] requisição recebida (usuário %d)", usuarioID)
 
+	r.Body = http.MaxBytesReader(w, r.Body, tamanhoMaximoUpload)
 	if err := r.ParseMultipartForm(tamanhoMaximoUpload); err != nil {
 		log.Printf("[foto-papel] erro ao ler multipart: %v", err)
 		http.Error(w, "imagem inválida ou muito grande (máximo 10MB)", http.StatusBadRequest)
@@ -141,6 +148,11 @@ func ImportarNotaFiscalPorFotoDePapel(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("[foto-papel] erro ao ler bytes da imagem: %v", err)
 		http.Error(w, "erro ao ler a imagem", http.StatusInternalServerError)
+		return
+	}
+	if err := services.ValidarImagem(conteudo); err != nil {
+		log.Printf("[foto-papel] imagem rejeitada: %v", err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	log.Printf("[foto-papel] imagem recebida: %d KB — chamando OCR.space...", len(conteudo)/1024)

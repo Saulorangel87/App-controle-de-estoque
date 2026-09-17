@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"controle-estoque/models"
 )
@@ -54,6 +55,11 @@ var psmsFotoPapel = []string{"4", "11"}
 // pra qualquer OCR, por causa do desbotamento/reflexo/amassado do papel) —
 // por isso a segunda camada abaixo existe especificamente pra foto física.
 func ExtrairProdutosDeImagem(imagem []byte) ([]models.ProdXML, error) {
+	if err := adquirirLimiteOCR(); err != nil {
+		return nil, err
+	}
+	defer liberarLimiteOCR()
+
 	imagemDecodificada, _, err := image.Decode(bytes.NewReader(imagem))
 	if err != nil {
 		// Formato de imagem não suportado ou arquivo corrompido — não tem
@@ -238,6 +244,43 @@ func rotacionarUmaVez(img image.Image) image.Image {
 // pixels por traço de cada caractere, o que costuma melhorar bastante o
 // reconhecimento de texto pequeno em prints/screenshots.
 const fatorAmpliacao = 3
+
+const (
+	maximoLadoImagemOCR   = 6000
+	maximoPixelsImagemOCR = 12_000_000
+)
+
+var limiteOCR = make(chan struct{}, 2)
+
+// ValidarImagem verifica dimensões sem decodificar todos os pixels. O limite
+// protege o processamento posterior, que amplia a imagem antes de executar o
+// Tesseract e poderia consumir memória excessiva com imagens especialmente
+// grandes.
+func ValidarImagem(imagem []byte) error {
+	config, formato, err := image.DecodeConfig(bytes.NewReader(imagem))
+	if err != nil || (formato != "jpeg" && formato != "png") {
+		return errors.New("imagem inválida ou formato não suportado; use JPEG ou PNG")
+	}
+	if config.Width <= 0 || config.Height <= 0 ||
+		config.Width > maximoLadoImagemOCR || config.Height > maximoLadoImagemOCR ||
+		int64(config.Width)*int64(config.Height) > maximoPixelsImagemOCR {
+		return errors.New("imagem muito grande; reduza a resolução antes de enviar")
+	}
+	return nil
+}
+
+func adquirirLimiteOCR() error {
+	select {
+	case limiteOCR <- struct{}{}:
+		return nil
+	case <-time.After(5 * time.Second):
+		return errors.New("leitura de imagem ocupada no momento; tente novamente em instantes")
+	}
+}
+
+func liberarLimiteOCR() {
+	<-limiteOCR
+}
 
 // prepararImagemParaOCR recebe uma imagem já decodificada (e, se for o
 // caso, já rotacionada — ver rotacionar90), converte pra escala de cinza,

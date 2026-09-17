@@ -57,6 +57,10 @@ func ExtrairProdutosDeImagemViaOCRSpace(imagem []byte, apiKey string) ([]models.
 	if apiKey == "" {
 		return nil, ErrOCRCloudSemChave
 	}
+	if err := adquirirLimiteOCR(); err != nil {
+		return nil, err
+	}
+	defer liberarLimiteOCR()
 
 	imagemPreparada, err := comprimirParaLimiteOCRSpace(imagem)
 	if err != nil {
@@ -136,8 +140,11 @@ func chamarOCRSpace(imagem []byte, apiKey string) (string, error) {
 	}
 	defer resposta.Body.Close()
 
-	corpoResposta, err := io.ReadAll(resposta.Body)
+	corpoResposta, err := io.ReadAll(io.LimitReader(resposta.Body, 2<<20+1))
 	if err != nil {
+		return "", ErrOCRCloudFalhou
+	}
+	if len(corpoResposta) > 2<<20 {
 		return "", ErrOCRCloudFalhou
 	}
 
