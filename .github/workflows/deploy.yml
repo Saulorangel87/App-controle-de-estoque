@@ -62,8 +62,8 @@ jobs:
           ping: ${{ secrets.VPS_HOST }}
 
       - name: Conectar na Oracle Cloud via SSH e atualizar o container
-          # v1.2.5 (0ff4204d59e8e51228ff73bce53f80d53301dee2)
-          uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2
+        # v1.2.5 (0ff4204d59e8e51228ff73bce53f80d53301dee2)
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
