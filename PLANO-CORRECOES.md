@@ -94,18 +94,22 @@ status, os arquivos afetados e as validações executadas.
 
 ### P5. Validar dados no backend
 
-- **Status:** Pendente.
+- **Status:** Concluído.
 - **Arquivos previstos:** `Backend/handlers/itens.go`,
   `Backend/handlers/notas_fiscais.go`, modelos e frontend.
 - **Ações:**
-  - rejeitar quantidade, retirada e estoque mínimo negativos, não finitos ou acima
+  - [x] rejeitar quantidade, retirada e estoque mínimo negativos, não finitos ou acima
     de limite definido;
-  - exigir nome, unidade e local com tamanho máximo;
-  - validar locais permitidos no backend;
-  - validar tamanho e formato dos campos de autenticação;
-  - repetir as regras no frontend apenas para melhor experiência, nunca como única defesa.
+  - [x] exigir nome, unidade e local com tamanho máximo;
+  - [x] validar locais permitidos no backend;
+  - [x] aplicar as regras também às entradas confirmadas de importação;
+  - [ ] validar tamanho e formato dos campos de autenticação;
+  - [ ] repetir as regras no frontend apenas para melhor experiência, nunca como única defesa.
 - **Critérios de aceite:** chamadas diretas à API não conseguem criar estoque
   negativo, desabilitar alertas com mínimo negativo ou gravar valores inválidos.
+- **Evidência:** adicionada validação centralizada em
+  `Backend/handlers/validacao.go`, aplicada aos endpoints de itens, retirada e
+  confirmação de nota. `go test ./...` e `go vet ./...` passaram em 17/09/2026.
 
 ### P6. Tornar retirada atômica
 
@@ -244,6 +248,7 @@ status, os arquivos afetados e as validações executadas.
 | 17/09/2026 | Análise inicial | Riscos e melhorias catalogados; nenhum código alterado | `git status`, leitura do projeto |
 | 17/09/2026 | Documento | Plano criado no projeto | Este arquivo |
 | 17/09/2026 | P1 | JWT endurecido; segredo vazio/curto bloqueia inicialização e claims inválidos retornam 401 | `go test ./...`, `go vet ./...` |
+| 17/09/2026 | P5 | Validação server-side de números, limites, textos, locais e importação | `go test ./...`, `go vet ./...` |
 
 ## Registro de decisões e riscos aceitos
 

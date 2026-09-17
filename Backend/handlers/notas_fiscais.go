@@ -244,6 +244,11 @@ func ConfirmarImportacao(w http.ResponseWriter, r *http.Request) {
 	criados := 0
 
 	for _, entrada := range entradas {
+		if err := validarEntradaConfirmada(entrada); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
 		if entrada.ItemID != nil {
 			resultado, err := database.DB.Exec(
 				"UPDATE itens SET quantidade = quantidade + ? WHERE id = ? AND usuario_id = ?",

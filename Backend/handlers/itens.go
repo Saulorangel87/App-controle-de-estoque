@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"controle-estoque/database"
@@ -47,8 +48,8 @@ func AdicionarItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if it.Nome == "" || it.Unidade == "" || it.Local == "" {
-		http.Error(w, "nome, unidade e local são obrigatórios", http.StatusBadRequest)
+	if err := validarItem(it); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -82,8 +83,8 @@ func EditarItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if it.Nome == "" || it.Unidade == "" || it.Local == "" {
-		http.Error(w, "nome, unidade e local são obrigatórios", http.StatusBadRequest)
+	if err := validarItem(it); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -146,8 +147,11 @@ func RetirarItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if ret.Quantidade <= 0 {
-		http.Error(w, "quantidade deve ser maior que zero", http.StatusBadRequest)
+	if err := validarNumeroEstoque(ret.Quantidade, "quantidade"); err != nil || ret.Quantidade <= 0 {
+		if err == nil {
+			err = errors.New("quantidade deve ser maior que zero")
+		}
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
