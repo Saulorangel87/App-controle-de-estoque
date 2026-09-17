@@ -23,6 +23,11 @@ import (
 // suficiente sem deixar alguém mandar um arquivo gigante por engano/abuso.
 const tamanhoMaximoUpload = 10 << 20 // 10MB
 
+const (
+	tamanhoMaximoChaveConfirmacao = 100
+	maximoItensPorConfirmacao     = 500
+)
+
 // ImportarNotaFiscal recebe o XML da NF-e, extrai os itens e devolve uma
 // prévia comparando cada item da nota com o estoque atual do usuário — nada
 // é salvo aqui ainda, só a análise. O usuário revisa no frontend e confirma
@@ -234,47 +239,124 @@ func montarPreviaImportacao(usuarioID int, produtos []models.ProdXML) ([]models.
 func ConfirmarImportacao(w http.ResponseWriter, r *http.Request) {
 	usuarioID := r.Context().Value(middleware.UsuarioIDContexto).(int)
 
-	var entradas []models.EntradaConfirmada
-	if err := json.NewDecoder(r.Body).Decode(&entradas); err != nil {
+	var corpo struct {
+		Chave    string                     `json:"chave"`
+		Entradas []models.EntradaConfirmada `json:"entradas"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&corpo); err != nil {
 		http.Error(w, "dados inválidos", http.StatusBadRequest)
+		return
+	}
+	corpo.Chave = strings.TrimSpace(corpo.Chave)
+	if corpo.Chave == "" || len(corpo.Chave) > tamanhoMaximoChaveConfirmacao {
+		http.Error(w, "chave de confirmação inválida", http.StatusBadRequest)
+		return
+	}
+	if len(corpo.Entradas) == 0 || len(corpo.Entradas) > maximoItensPorConfirmacao {
+		http.Error(w, "quantidade de itens da importação inválida", http.StatusBadRequest)
+		return
+	}
+
+	for _, entrada := range corpo.Entradas {
+		if err := validarEntradaConfirmada(entrada); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+
+	transacao, err := database.DB.Begin()
+	if err != nil {
+		http.Error(w, "erro ao iniciar confirmação", http.StatusInternalServerError)
+		return
+	}
+
+	// A chave é única por usuário. Se o cliente repetir a mesma requisição após
+	// um timeout, devolvemos o resultado original sem somar a entrada novamente.
+	resultadoChave, err := transacao.Exec(
+		`INSERT OR IGNORE INTO confirmacoes_importacao
+		 (usuario_id, chave, atualizados, criados)
+		 VALUES (?, ?, 0, 0)`,
+		usuarioID, corpo.Chave,
+	)
+	if err != nil {
+		transacao.Rollback()
+		http.Error(w, "erro ao registrar confirmação", http.StatusInternalServerError)
+		return
+	}
+
+	linhasChave, _ := resultadoChave.RowsAffected()
+	if linhasChave == 0 {
+		var atualizadosAnteriores, criadosAnteriores int
+		err = transacao.QueryRow(
+			`SELECT atualizados, criados FROM confirmacoes_importacao
+			 WHERE usuario_id = ? AND chave = ?`, usuarioID, corpo.Chave,
+		).Scan(&atualizadosAnteriores, &criadosAnteriores)
+		if err != nil {
+			transacao.Rollback()
+			http.Error(w, "erro ao consultar confirmação anterior", http.StatusInternalServerError)
+			return
+		}
+		if err := transacao.Commit(); err != nil {
+			http.Error(w, "erro ao concluir confirmação", http.StatusInternalServerError)
+			return
+		}
+		json.NewEncoder(w).Encode(map[string]int{
+			"atualizados": atualizadosAnteriores,
+			"criados":     criadosAnteriores,
+		})
 		return
 	}
 
 	atualizados := 0
 	criados := 0
 
-	for _, entrada := range entradas {
-		if err := validarEntradaConfirmada(entrada); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
+	for _, entrada := range corpo.Entradas {
 		if entrada.ItemID != nil {
-			resultado, err := database.DB.Exec(
+			resultado, err := transacao.Exec(
 				"UPDATE itens SET quantidade = quantidade + ? WHERE id = ? AND usuario_id = ?",
 				entrada.Quantidade, *entrada.ItemID, usuarioID,
 			)
 			if err != nil {
-				continue
+				transacao.Rollback()
+				http.Error(w, "erro ao atualizar item da importação", http.StatusInternalServerError)
+				return
 			}
-			if linhas, _ := resultado.RowsAffected(); linhas > 0 {
-				atualizados++
+			linhas, _ := resultado.RowsAffected()
+			if linhas == 0 {
+				transacao.Rollback()
+				http.Error(w, "item da importação não encontrado", http.StatusNotFound)
+				return
 			}
+			atualizados++
 			continue
 		}
 
-		if entrada.Nome == "" || entrada.Unidade == "" || entrada.Local == "" {
-			continue
-		}
-
-		_, err := database.DB.Exec(
+		_, err := transacao.Exec(
 			`INSERT INTO itens (usuario_id, nome, quantidade, unidade, local, estoque_minimo)
 			 VALUES (?, ?, ?, ?, ?, ?)`,
 			usuarioID, entrada.Nome, entrada.Quantidade, entrada.Unidade, entrada.Local, entrada.EstoqueMinimo,
 		)
-		if err == nil {
-			criados++
+		if err != nil {
+			transacao.Rollback()
+			http.Error(w, "erro ao criar item da importação", http.StatusInternalServerError)
+			return
 		}
+		criados++
+	}
+
+	if _, err := transacao.Exec(
+		`UPDATE confirmacoes_importacao SET atualizados = ?, criados = ?
+		 WHERE usuario_id = ? AND chave = ?`,
+		atualizados, criados, usuarioID, corpo.Chave,
+	); err != nil {
+		transacao.Rollback()
+		http.Error(w, "erro ao finalizar confirmação", http.StatusInternalServerError)
+		return
+	}
+
+	if err := transacao.Commit(); err != nil {
+		http.Error(w, "erro ao concluir confirmação", http.StatusInternalServerError)
+		return
 	}
 
 	json.NewEncoder(w).Encode(map[string]int{

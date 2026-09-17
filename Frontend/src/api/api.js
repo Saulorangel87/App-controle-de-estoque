@@ -199,10 +199,10 @@ export function importarNotaFiscalPorQRCode(url, token) {
   );
 }
 
-export function confirmarImportacaoNota(entradas, token) {
+export function confirmarImportacaoNota(chave, entradas, token) {
   return requisitar(
     "/notas-fiscais/confirmar",
-    { method: "POST", body: JSON.stringify(entradas) },
+    { method: "POST", body: JSON.stringify({ chave, entradas }) },
     token
   );
 }

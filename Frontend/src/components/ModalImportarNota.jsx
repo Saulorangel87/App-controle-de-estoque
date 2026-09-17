@@ -33,6 +33,7 @@ export default function ModalImportarNota({ token, itensEstoque, aoFechar, aoCon
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState("");
   const [itensRevisao, setItensRevisao] = useState([]);
+  const [chaveConfirmacao, setChaveConfirmacao] = useState("");
   const [resumo, setResumo] = useState(null);
   const [urlColada, setUrlColada] = useState("");
   const [usarCamera, setUsarCamera] = useState(true);
@@ -45,6 +46,7 @@ export default function ModalImportarNota({ token, itensEstoque, aoFechar, aoCon
   // fluxos) em itens editáveis pra tela de revisão — reaproveitado tanto
   // pelo upload de XML quanto pela leitura de QR Code.
   function prepararItensParaRevisao(previa) {
+    setChaveConfirmacao(crypto.randomUUID());
     return previa.map((item) => ({
       ...item,
       nomeFinal: item.nome_nota,
@@ -188,7 +190,7 @@ export default function ModalImportarNota({ token, itensEstoque, aoFechar, aoCon
         estoque_minimo: Number(item.estoqueMinimo) || 0,
       }));
 
-      const resultado = await confirmarImportacaoNota(entradas, token);
+      const resultado = await confirmarImportacaoNota(chaveConfirmacao, entradas, token);
       setResumo(resultado);
       setPasso(PASSOS.SUCESSO);
     } catch (e) {

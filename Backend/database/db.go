@@ -49,11 +49,26 @@ func criarTabelas() {
 		FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
 	);`
 
+	confirmacoesImportacao := `
+	CREATE TABLE IF NOT EXISTS confirmacoes_importacao (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		usuario_id INTEGER NOT NULL,
+		chave TEXT NOT NULL,
+		atualizados INTEGER NOT NULL,
+		criados INTEGER NOT NULL,
+		criada_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		UNIQUE (usuario_id, chave),
+		FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+	);`
+
 	if _, err := DB.Exec(usuarios); err != nil {
 		log.Fatal("erro ao criar tabela usuarios:", err)
 	}
 	if _, err := DB.Exec(itens); err != nil {
 		log.Fatal("erro ao criar tabela itens:", err)
+	}
+	if _, err := DB.Exec(confirmacoesImportacao); err != nil {
+		log.Fatal("erro ao criar tabela de confirmações:", err)
 	}
 }
 

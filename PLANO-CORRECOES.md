@@ -128,16 +128,22 @@ status, os arquivos afetados e as validações executadas.
 
 ### P7. Tornar confirmação de nota transacional e idempotente
 
-- **Status:** Pendente.
+- **Status:** Concluído — validação do build frontend pendente por bloqueio do ambiente.
 - **Arquivos previstos:** `Backend/handlers/notas_fiscais.go`, banco/modelos e frontend.
 - **Ações:**
-  - validar toda a lista recebida, com limite de itens;
-  - usar transação para atualizar/criar tudo ou nada;
-  - não ignorar erros silenciosamente;
-  - definir estratégia de idempotência para reenvio (chave de operação ou confirmação única);
-  - manter isolamento por usuário em todas as operações.
+  - [x] validar toda a lista recebida, com limite de 500 itens;
+  - [x] usar transação para atualizar/criar tudo ou nada;
+  - [x] retornar erro e rollback em vez de ignorar falhas silenciosamente;
+  - [x] usar chave única por usuário para impedir reprocessamento;
+  - [x] manter isolamento por usuário em todas as operações;
+  - [x] atualizar o frontend para gerar e reenviar a chave durante a confirmação.
 - **Critérios de aceite:** falha em qualquer item gera rollback e resposta clara;
   reenvio da mesma confirmação não duplica entrada.
+- **Evidência:** criada a tabela `confirmacoes_importacao`, a API passou a
+  receber `{ chave, entradas }` e o modal gera uma chave por prévia. `go test
+  ./...` e `go vet ./...` passaram em 17/09/2026. `npm run build` foi tentado,
+  mas o ambiente bloqueou o Vite/esbuild ao acessar diretório fora do workspace;
+  repetir no ambiente local/CI.
 
 ## Fase 3 — Uploads, OCR e integrações externas
 
@@ -256,6 +262,7 @@ status, os arquivos afetados e as validações executadas.
 | 17/09/2026 | P1 | JWT endurecido; segredo vazio/curto bloqueia inicialização e claims inválidos retornam 401 | `go test ./...`, `go vet ./...` |
 | 17/09/2026 | P5 | Validação server-side de números, limites, textos, locais e importação | `go test ./...`, `go vet ./...` |
 | 17/09/2026 | P6 | Retirada de estoque convertida para atualização atômica | `go test ./...`, `go vet ./...`, `git diff --check` |
+| 17/09/2026 | P7 | Confirmação de nota transacional, com rollback e idempotência por usuário | `go test ./...`, `go vet ./...`; build frontend bloqueado pelo ambiente |
 
 ## Registro de decisões e riscos aceitos
 
