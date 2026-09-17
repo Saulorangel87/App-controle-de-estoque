@@ -274,12 +274,15 @@ status, os arquivos afetados e as validações executadas.
 
 ### P12. Reforçar pipeline e reprodutibilidade
 
-- **Status:** Em andamento — aprovação manual aplicada; pinagem de actions pendente.
+- **Status:** Em andamento — action SSH atualizada e fixada por SHA; validação
+  do deploy ainda pendente.
 - **Arquivos previstos:** `.github/workflows/deploy.yml`, Dockerfiles.
 - **Ações:**
   - [ ] adicionar testes automatizados e verificações de segurança;
   - [x] usar `npm ci` no Dockerfile e no CI;
   - [ ] fixar actions por SHA após revisão das versões;
+  - [x] atualizar/revalidar `appleboy/ssh-action`, anteriormente em `v1.0.3`,
+    para `v1.2.5` fixada por SHA;
   - [x] tornar pull previsível com `git pull --ff-only origin main`;
   - [x] impedir deploys concorrentes com `concurrency`;
   - [x] adicionar smoke tests HTTP para backend e frontend;
@@ -293,8 +296,8 @@ status, os arquivos afetados e as validações executadas.
 
 #### P12-A. Acesso privado da VPS via Tailscale
 
-- **Status:** Em andamento — workflow ajustado; configuração dos secrets e
-  execução real ainda pendentes.
+- **Status:** Em andamento — build validado; execução bloqueada primeiro por
+  fingerprint divergente e depois por credencial Tailscale inválida.
 - **Constatação:** o IP informado (`100.67.151.30`) é um endereço Tailscale.
   O workflow anterior usava runner GitHub hospedado e SSH direto, sem conectar
   o runner ao tailnet; por isso não funcionaria com a porta 22 pública fechada.
@@ -305,9 +308,10 @@ status, os arquivos afetados e as validações executadas.
   - [x] usar secrets separados para `VPS_USER` e `VPS_SSH_KEY`;
   - [x] validar fingerprint SHA-256 com `VPS_HOST_FINGERPRINT`;
   - [x] manter SSH na porta 22 privada;
-  - [ ] criar/configurar `TAILSCALE_AUTHKEY`, `VPS_HOST`, `VPS_USER`,
+  - [x] criar/configurar `TAILSCALE_AUTHKEY`, `VPS_HOST`, `VPS_USER`,
     `VPS_SSH_KEY` e `VPS_HOST_FINGERPRINT` no ambiente protegido;
   - [ ] restringir a auth key por tag/política somente à VPS e porta 22;
+  - [ ] usar auth key reutilizável e efêmera, adequada a runners descartáveis do GitHub Actions;
   - [ ] executar workflow e confirmar smoke tests sem abrir a porta 22 pública;
   - [x] trocar o disparo automático por `workflow_dispatch`;
   - [x] usar o ambiente `production` para permitir regras de aprovação;
@@ -388,6 +392,13 @@ status, os arquivos afetados e as validações executadas.
 | 17/09/2026 | P4 | Proteção de origem adicionada para operações mutáveis com cookie de sessão | `go test ./...`, `go vet ./...`, `git diff --check` |
 | 17/09/2026 | P4/P11/P13 | Build de produção do frontend passou; Docker/nginx permanece pendente por daemon indisponível | `npm run build` |
 | 17/09/2026 | P12 | Deploy alterado para acionamento manual com ambiente `production` | `.github/workflows/deploy.yml`; execução pendente |
+| 17/09/2026 | P12-A | Execução #5: build passou e Tailscale conectou, mas SSH recusou o host por divergência de fingerprint | GitHub Actions #5; `ssh: handshake failed: ssh: host key fingerprint mismatch` |
+| 17/09/2026 | P12-A | Nova execução: build passou, mas Tailscale recusou a credencial antes do SSH | GitHub Actions; `backend error: invalid key` |
+| 17/09/2026 | P12-A | Causa provável identificada: auth key não reutilizável foi invalidada após o uso pelo runner descartável | Tela do Tailscale indica auth key recentemente invalidada |
+| 17/09/2026 | P12-A | Execução seguinte: autenticação Tailscale passou, mas o SSH ainda recusou o fingerprint cadastrado | GitHub Actions; `ssh: handshake failed: ssh: host key fingerprint mismatch` |
+| 17/09/2026 | P12-A | Verificação local confirmou a chave ED25519 apresentada pelo IP Tailscale | SSH local sem autenticação; fingerprint `SHA256:H70y+CElKTME1FJYmGNxXQGILhSBDLycqGbGqvpZZbk` |
+| 17/09/2026 | P12 | Revisão da execução #9 confirmou ambiente, secrets e Tailscale; falha permanece na validação do fingerprint pelo `appleboy/ssh-action@v1.0.3` | GitHub Actions #9; issue oficial #275 da action relata o mesmo erro |
+| 17/09/2026 | P12 | Action SSH atualizada para v1.2.5 e fixada no commit `0ff4204d59e8e51228ff73bce53f80d53301dee2` | Release oficial v1.2.5; `git diff --check` pendente |
 
 ## Registro de decisões e riscos aceitos
 
