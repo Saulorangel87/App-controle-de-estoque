@@ -3,6 +3,7 @@ package middleware
 import (
 	"net"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -16,7 +17,7 @@ import (
 // repetido várias vezes seguidas, nunca é bloqueado — só erros consecutivos.
 
 const (
-	maxTentativas    = 5
+	maxTentativas      = 5
 	janelaDeTentativas = 5 * time.Minute
 )
 
@@ -60,6 +61,7 @@ func LimitarTentativas(proximo http.HandlerFunc) http.HandlerFunc {
 func bloqueado(ip string) bool {
 	tentativasPorIP.mu.Lock()
 	defer tentativasPorIP.mu.Unlock()
+	limparRegistrosExpirados()
 
 	tentativas := limpasAntigasTentativas(tentativasPorIP.tentativas[ip])
 	tentativasPorIP.tentativas[ip] = tentativas
@@ -98,18 +100,56 @@ func limpasAntigasTentativas(tentativas []time.Time) []time.Time {
 // obterIP tenta pegar o IP real do cliente atrás do Cloudflare Tunnel/nginx
 // (que colocam o IP original em cabeçalhos), com fallback pro IP da conexão direta.
 func obterIP(r *http.Request) string {
-	if cf := r.Header.Get("CF-Connecting-IP"); cf != "" {
-		return cf
-	}
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		partes := strings.Split(xff, ",")
-		return strings.TrimSpace(partes[0])
-	}
 	ip, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
-		return r.RemoteAddr
+		ip = r.RemoteAddr
 	}
-	return ip
+	if net.ParseIP(ip) == nil {
+		return "ip-invalido"
+	}
+
+	// Cabeçalhos de proxy só são confiáveis quando a conexão veio de uma rede
+	// explicitamente configurada. Isso evita que uma chamada direta ao backend
+	// falsifique CF-Connecting-IP/X-Forwarded-For para contornar o rate limit.
+	if proxyConfiavel(ip) {
+		if cf := net.ParseIP(strings.TrimSpace(r.Header.Get("CF-Connecting-IP"))); cf != nil {
+			return cf.String()
+		}
+		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+			partes := strings.Split(xff, ",")
+			if cliente := net.ParseIP(strings.TrimSpace(partes[0])); cliente != nil {
+				return cliente.String()
+			}
+		}
+	}
+
+	return net.ParseIP(ip).String()
+}
+
+// proxyConfiavel verifica o IP do peer contra TRUSTED_PROXY_CIDRS, uma lista
+// separada por vírgulas (por exemplo: "127.0.0.1/32,172.18.0.0/16"). Sem a
+// configuração, nenhum cabeçalho de proxy é aceito.
+func proxyConfiavel(ip string) bool {
+	redes := strings.Split(os.Getenv("TRUSTED_PROXY_CIDRS"), ",")
+	endereco := net.ParseIP(ip)
+	for _, textoRede := range redes {
+		_, rede, err := net.ParseCIDR(strings.TrimSpace(textoRede))
+		if err == nil && rede.Contains(endereco) {
+			return true
+		}
+	}
+	return false
+}
+
+func limparRegistrosExpirados() {
+	if len(tentativasPorIP.tentativas) <= 10000 {
+		return
+	}
+	for ip, tentativas := range tentativasPorIP.tentativas {
+		if len(limpasAntigasTentativas(tentativas)) == 0 {
+			delete(tentativasPorIP.tentativas, ip)
+		}
+	}
 }
 
 // capturadorDeStatus é um wrapper mínimo de http.ResponseWriter só para

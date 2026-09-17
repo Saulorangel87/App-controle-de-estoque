@@ -73,16 +73,24 @@ status, os arquivos afetados e as validações executadas.
 
 ### P3. Tornar o rate limit confiável
 
-- **Status:** Pendente.
+- **Status:** Concluído — requer configuração do proxy no ambiente de produção.
 - **Arquivos previstos:** `Backend/middleware/ratelimit.go`, configuração de
   proxy/deploy se necessário.
 - **Ações:**
-  - aceitar `CF-Connecting-IP` somente quando a requisição vier de proxy confiável;
-  - validar o formato do IP e definir fallback seguro;
-  - considerar chave composta por IP + identificador normalizado da conta;
-  - adicionar limpeza/limite de memória e avaliar armazenamento compartilhado em produção.
+  - [x] aceitar `CF-Connecting-IP` e `X-Forwarded-For` somente quando a
+    conexão vier de uma rede em `TRUSTED_PROXY_CIDRS`;
+  - [x] validar o formato do IP e usar o peer da conexão como fallback seguro;
+  - [ ] considerar chave composta por IP + identificador normalizado da conta;
+  - [x] limpar registros expirados quando o mapa atingir grande volume;
+  - [ ] avaliar armazenamento compartilhado em produção, caso existam múltiplas instâncias.
 - **Critérios de aceite:** cabeçalhos arbitrários enviados diretamente ao backend
   não permitem contornar o limite; o comportamento atrás do Cloudflare continua correto.
+- **Evidência:** `obterIP` agora só usa cabeçalhos quando o peer pertence às
+  redes CIDR configuradas; IPs inválidos são ignorados e o mapa possui limpeza
+  de registros expirados. `go test ./...`, `go vet ./...` e `git diff --check`
+  passaram em 17/09/2026. Antes do próximo deploy, configurar
+  `TRUSTED_PROXY_CIDRS` com a rede real do proxy/túnel; sem essa variável o
+  sistema fica seguro contra falsificação, mas pode agrupar usuários pelo peer.
 
 ### P4. Proteger tokens no frontend
 
@@ -269,6 +277,7 @@ status, os arquivos afetados e as validações executadas.
 | 17/09/2026 | P6 | Retirada de estoque convertida para atualização atômica | `go test ./...`, `go vet ./...`, `git diff --check` |
 | 17/09/2026 | P7 | Confirmação de nota transacional, com rollback e idempotência por usuário | `go test ./...`, `go vet ./...`; build frontend bloqueado pelo ambiente |
 | 17/09/2026 | P2 | Rate limit aplicado à pergunta e validação de senha adicionada no backend | `go test ./...`, `go vet ./...`, `git diff --check` |
+| 17/09/2026 | P3 | Rate limit deixou de confiar em cabeçalhos de IP não verificados | `go test ./...`, `go vet ./...`, `git diff --check` |
 
 ## Registro de decisões e riscos aceitos
 
