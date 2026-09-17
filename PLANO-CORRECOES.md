@@ -237,12 +237,22 @@ status, os arquivos afetados e as validações executadas.
 
 ### P11. Adicionar headers de segurança no nginx
 
-- **Status:** Pendente.
+- **Status:** Em andamento — configuração concluída; validação no container pendente.
 - **Arquivos previstos:** `Frontend/nginx.conf`.
-- **Ações:** avaliar e configurar CSP compatível com React/Vite, HSTS somente em
-  domínio HTTPS, `X-Content-Type-Options`, `Referrer-Policy` e `frame-ancestors`.
+- **Ações:**
+  - [x] configurar CSP compatível com React/Vite e PWA;
+  - [x] configurar HSTS para o domínio HTTPS;
+  - [x] configurar `X-Content-Type-Options`;
+  - [x] configurar `Referrer-Policy`;
+  - [x] configurar `Permissions-Policy` e `frame-ancestors`/`X-Frame-Options`;
+  - [ ] validar headers e ausência de regressões no container em build/ambiente de produção.
 - **Critérios de aceite:** headers aparecem em produção sem quebrar login, PWA,
   câmera ou chamadas à API.
+- **Evidência parcial:** adicionados headers de segurança no bloco principal e
+  na rota `/assets/` do nginx, evitando perda por herança de `add_header`.
+  `git diff --check` passou em 17/09/2026. O nginx não está instalado no
+  ambiente local, portanto a sintaxe e a validação visual/funcional ainda devem
+  ser confirmadas pelo build do container/CI.
 
 ### P12. Reforçar pipeline e reprodutibilidade
 
@@ -299,6 +309,7 @@ status, os arquivos afetados e as validações executadas.
 | 17/09/2026 | P8 | Uploads e processamento OCR passaram a ter limites de corpo, imagem, concorrência e resposta | `go test ./...`, `go vet ./...`, `git diff --check` |
 | 17/09/2026 | P9 | Debug de OCR/NFC-e desativado por padrão e protegido por flag | `go test ./...`, `go vet ./...`, `git diff --check` |
 | 17/09/2026 | P10 | QR Code mantido desativado e scraper protegido contra esquemas, redirects e respostas grandes | `go test ./...`, `go vet ./...`, `git diff --check` |
+| 17/09/2026 | P11 | Headers de segurança adicionados ao nginx principal e aos assets | `git diff --check`; validação do container pendente |
 
 ## Registro de decisões e riscos aceitos
 
