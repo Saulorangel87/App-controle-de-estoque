@@ -274,13 +274,15 @@ status, os arquivos afetados e as validações executadas.
 
 ### P12. Reforçar pipeline e reprodutibilidade
 
-- **Status:** Em andamento — actions revisadas e fixadas por SHA; falta validar
-  o CI com as novas versões e ampliar as verificações de segurança.
+- **Status:** Em andamento — actions e runner revisados/fixados; falta ampliar
+  as verificações de segurança e remover a dependência de `authkey` da Tailscale.
 - **Arquivos previstos:** `.github/workflows/deploy.yml`, Dockerfiles.
 - **Ações:**
   - [ ] adicionar testes automatizados e verificações de segurança;
   - [x] usar `npm ci` no Dockerfile e no CI;
   - [x] fixar actions por SHA após revisão das versões;
+  - [x] fixar o runner em `ubuntu-24.04` para evitar migração automática do
+    `ubuntu-latest`;
   - [x] avaliar `appleboy/ssh-action` e identificar incompatibilidade persistente
     de fingerprint;
   - [x] substituir a action por SSH nativo com `ssh-keyscan`, comparação de
@@ -296,14 +298,14 @@ status, os arquivos afetados e as validações executadas.
 - **Evidência parcial:** Dockerfile passou de `npm install` para `npm ci`; o
   workflow recebeu permissões mínimas de leitura, timeout, concorrência, pull
   fast-forward-only, espera de prontidão e probes pós-deploy. `git diff
-  --check` passou em 17/09/2026. A execução #14 confirmou o deploy privado;
-  as actions foram atualizadas para runtime Node 24 e o cache Go foi apontado
-  para `Backend/go.sum`; falta confirmar a remoção dos avisos no próximo CI.
+  --check` passou em 17/09/2026. A execução #15 confirmou o deploy privado;
+  as actions foram atualizadas para runtime Node 24, o cache Go foi apontado
+  para `Backend/go.sum` e o runner foi fixado em Ubuntu 24.04.
 
 #### P12-A. Acesso privado da VPS via Tailscale
 
-- **Status:** Em andamento — acesso privado e deploy validados; falta restringir
-  a chave Tailscale por tag/política específica.
+- **Status:** Em andamento — acesso privado e deploy validados; falta migrar a
+  autenticação para OAuth com tag/política específica.
 - **Constatação:** o IP informado (`100.67.151.30`) é um endereço Tailscale.
   O workflow anterior usava runner GitHub hospedado e SSH direto, sem conectar
   o runner ao tailnet; por isso não funcionaria com a porta 22 pública fechada.
@@ -316,7 +318,8 @@ status, os arquivos afetados e as validações executadas.
   - [x] manter SSH na porta 22 privada;
   - [x] criar/configurar `TAILSCALE_AUTHKEY`, `VPS_HOST`, `VPS_USER`,
     `VPS_SSH_KEY` e `VPS_HOST_FINGERPRINT` no ambiente protegido;
-  - [ ] restringir a auth key por tag/política somente à VPS e porta 22;
+  - [ ] migrar de `authkey` para OAuth client com tag/política exclusiva do
+    runner, permitindo acesso somente à VPS e à porta 22;
   - [x] usar auth key reutilizável e efêmera, adequada a runners descartáveis do GitHub Actions;
   - [x] executar workflow e confirmar smoke tests sem abrir a porta 22 pública;
   - [x] trocar o disparo automático por `workflow_dispatch`;
@@ -415,6 +418,9 @@ status, os arquivos afetados e as validações executadas.
 | 17/09/2026 | P12 | O retry explícito dos smoke tests absorveu a janela de inicialização sem mascarar falha definitiva | GitHub Actions #14; job `deploy` concluído em 12s |
 | 17/09/2026 | P12 | Permanecem dois avisos não bloqueantes no CI: actions forçadas para Node.js 24 e cache Go sem `go.sum` na raiz | GitHub Actions #14; melhoria futura recomendada |
 | 17/09/2026 | P12 | Actions atualizadas e fixadas por SHA: checkout v7.0.1, setup-go v7.0.0, setup-node v7.0.0 e Tailscale v4.1.3; cache Go apontado para `Backend/go.sum` | `.github/workflows/deploy.yml`; validação no próximo CI |
+| 17/09/2026 | P12 | Execução #15 confirmou build e deploy após as actions fixadas; avisos de Node.js e cache Go não reapareceram | GitHub Actions #15; `build-and-test` 58s e `deploy` 17s |
+| 17/09/2026 | P12 | Runner fixado em `ubuntu-24.04`; o aviso de migração automática do `ubuntu-latest` será eliminado na próxima execução | `.github/workflows/deploy.yml`; validação no próximo CI |
+| 17/09/2026 | P12-A | Execução #15 confirmou Tailscale, SSH privado, fingerprint e smoke tests; permanece o aviso de depreciação do parâmetro `authkey` | GitHub Actions #15; status `Success` em 1m55s |
 
 ## Registro de decisões e riscos aceitos
 

@@ -18,7 +18,7 @@ on:
 jobs:
   # ---------- CI: build e checagem, sem tocar em produção ----------
   build-and-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - name: Baixar o código do repositório
@@ -52,7 +52,7 @@ jobs:
   # ---------- CD: só roda se a CI acima passar ----------
   deploy:
     needs: build-and-test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment: production
     timeout-minutes: 15
     steps:
