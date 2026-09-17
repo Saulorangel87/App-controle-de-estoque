@@ -274,8 +274,9 @@ status, os arquivos afetados e as validações executadas.
 
 ### P12. Reforçar pipeline e reprodutibilidade
 
-- **Status:** Em andamento — SSH nativo validado; smoke test precisa tolerar a
-  janela de inicialização dos containers.
+- **Status:** Em andamento — deploy privado validado; ainda faltam fixar todas
+  as actions por SHA, ampliar verificações de segurança e tratar os avisos do
+  CI.
 - **Arquivos previstos:** `.github/workflows/deploy.yml`, Dockerfiles.
 - **Ações:**
   - [ ] adicionar testes automatizados e verificações de segurança;
@@ -295,13 +296,14 @@ status, os arquivos afetados e as validações executadas.
   não é apresentado como concluído.
 - **Evidência parcial:** Dockerfile passou de `npm install` para `npm ci`; o
   workflow recebeu permissões mínimas de leitura, timeout, concorrência, pull
-  fast-forward-only e probes pós-deploy. `git diff --check` passou em
-  17/09/2026. O workflow não foi executado nesta sessão e não houve deploy.
+  fast-forward-only, espera de prontidão e probes pós-deploy. `git diff
+  --check` passou em 17/09/2026. A execução #14 confirmou o deploy privado;
+  permanecem avisos não bloqueantes de Node.js/cache para tratar.
 
 #### P12-A. Acesso privado da VPS via Tailscale
 
-- **Status:** Em andamento — build validado; execução bloqueada primeiro por
-  fingerprint divergente e depois por credencial Tailscale inválida.
+- **Status:** Em andamento — acesso privado e deploy validados; falta restringir
+  a chave Tailscale por tag/política específica.
 - **Constatação:** o IP informado (`100.67.151.30`) é um endereço Tailscale.
   O workflow anterior usava runner GitHub hospedado e SSH direto, sem conectar
   o runner ao tailnet; por isso não funcionaria com a porta 22 pública fechada.
@@ -315,11 +317,11 @@ status, os arquivos afetados e as validações executadas.
   - [x] criar/configurar `TAILSCALE_AUTHKEY`, `VPS_HOST`, `VPS_USER`,
     `VPS_SSH_KEY` e `VPS_HOST_FINGERPRINT` no ambiente protegido;
   - [ ] restringir a auth key por tag/política somente à VPS e porta 22;
-  - [ ] usar auth key reutilizável e efêmera, adequada a runners descartáveis do GitHub Actions;
-  - [ ] executar workflow e confirmar smoke tests sem abrir a porta 22 pública;
+  - [x] usar auth key reutilizável e efêmera, adequada a runners descartáveis do GitHub Actions;
+  - [x] executar workflow e confirmar smoke tests sem abrir a porta 22 pública;
   - [x] trocar o disparo automático por `workflow_dispatch`;
   - [x] usar o ambiente `production` para permitir regras de aprovação;
-  - [ ] configurar aprovação obrigatória no ambiente do GitHub.
+  - [x] configurar aprovação obrigatória no ambiente do GitHub.
 - **Critérios de aceite:** o workflow conecta ao tailnet, acessa a VPS pelo
   endereço Tailscale, valida a host key e executa o smoke test; uma execução
   fora do tailnet não alcança a VPS.
@@ -408,6 +410,10 @@ status, os arquivos afetados e as validações executadas.
 | 17/09/2026 | P12 | Deploy migrado para SSH nativo; fingerprint ED25519 é comparado antes da autenticação e o `known_hosts` temporário é usado com verificação estrita | `.github/workflows/deploy.yml`; execução #13 confirmou SSH, Tailscale e rebuild |
 | 17/09/2026 | P12 | Execução #13 confirmou a conexão privada e a recriação dos containers, mas o primeiro probe recebeu `curl (52) Empty reply from server` durante a inicialização | GitHub Actions #13; ajuste de prontidão pendente |
 | 17/09/2026 | P12 | Smoke tests ajustados para repetir falhas de conexão/resposta por até 20 tentativas antes de falhar | `.github/workflows/deploy.yml`; `git diff --check` pendente |
+| 17/09/2026 | P12-A | Auth key reutilizável e efêmera configurada; aprovação obrigatória do ambiente `production` habilitada | Configuração do Tailscale e GitHub Environment |
+| 17/09/2026 | P12 | Execução #14 passou com build, Tailscale, SSH nativo, fingerprint, rebuild Docker e smoke tests HTTP | GitHub Actions #14; status `Success` em 1m37s |
+| 17/09/2026 | P12 | O retry explícito dos smoke tests absorveu a janela de inicialização sem mascarar falha definitiva | GitHub Actions #14; job `deploy` concluído em 12s |
+| 17/09/2026 | P12 | Permanecem dois avisos não bloqueantes no CI: actions forçadas para Node.js 24 e cache Go sem `go.sum` na raiz | GitHub Actions #14; melhoria futura recomendada |
 
 ## Registro de decisões e riscos aceitos
 
