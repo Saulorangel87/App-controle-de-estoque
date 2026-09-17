@@ -59,7 +59,9 @@ jobs:
       - name: Conectar o runner à rede privada Tailscale
         uses: tailscale/github-action@780049a30b6ff5c378a9e7b389d15ece7a204888 # v4.1.3
         with:
-          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+          oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
+          tags: tag:github-actions
           ping: ${{ secrets.VPS_HOST }}
 
       - name: Conectar na Oracle Cloud via SSH e atualizar o container
