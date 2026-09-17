@@ -2,6 +2,8 @@ package middleware
 
 import (
 	"context"
+	"fmt"
+	"math"
 	"net/http"
 	"strings"
 
@@ -30,21 +32,39 @@ func Autenticar(proximo http.HandlerFunc) http.HandlerFunc {
 
 		tokenString := partes[1]
 
-		token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
-			return config.ChaveSecreta(), nil
-		})
+		claims := jwt.MapClaims{}
+		token, err := jwt.ParseWithClaims(
+			tokenString,
+			claims,
+			func(t *jwt.Token) (interface{}, error) {
+				if t.Method != jwt.SigningMethodHS256 {
+					return nil, fmt.Errorf("algoritmo JWT não permitido: %s", t.Method.Alg())
+				}
+				return config.ChaveSecreta(), nil
+			},
+			jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}),
+		)
 		if err != nil || !token.Valid {
 			http.Error(w, "token inválido ou expirado", http.StatusUnauthorized)
 			return
 		}
 
-		claims, ok := token.Claims.(jwt.MapClaims)
+		claimsValidados, ok := token.Claims.(jwt.MapClaims)
 		if !ok {
 			http.Error(w, "token inválido", http.StatusUnauthorized)
 			return
 		}
 
-		usuarioID := int(claims["usuario_id"].(float64))
+		usuarioIDFloat, ok := claimsValidados["usuario_id"].(float64)
+		if !ok || usuarioIDFloat <= 0 || math.Trunc(usuarioIDFloat) != usuarioIDFloat {
+			http.Error(w, "token inválido", http.StatusUnauthorized)
+			return
+		}
+		usuarioID := int(usuarioIDFloat)
+		if float64(usuarioID) != usuarioIDFloat {
+			http.Error(w, "token inválido", http.StatusUnauthorized)
+			return
+		}
 
 		ctx := context.WithValue(r.Context(), UsuarioIDContexto, usuarioID)
 		proximo(w, r.WithContext(ctx))

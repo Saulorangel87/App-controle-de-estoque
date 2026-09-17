@@ -35,17 +35,22 @@ status, os arquivos afetados e as validações executadas.
 
 ### P1. Endurecer validação de JWT
 
-- **Status:** Pendente.
+- **Status:** Concluído.
 - **Arquivos previstos:** `Backend/middleware/auth.go`,
   `Backend/config/config.go`, possivelmente `Backend/main.go`.
 - **Ações:**
-  - rejeitar inicialização se `JWT_SECRET` estiver vazio ou fraco;
-  - aceitar somente o algoritmo configurado e esperado, atualmente HS256;
-  - validar claims com tipos seguros, incluindo `usuario_id` e `exp`;
-  - evitar assertions que possam causar panic;
-  - avaliar `iss`, `aud`, `iat` e estratégia de invalidação após troca de senha.
+  - [x] rejeitar inicialização se `JWT_SECRET` estiver vazio ou fraco;
+  - [x] aceitar somente HS256;
+  - [x] validar `usuario_id` com tipo numérico inteiro e positivo;
+  - [x] usar o parser de claims do JWT, que valida a expiração;
+  - [x] evitar assertions que poderiam causar panic;
+  - [ ] avaliar `iss`, `aud`, `iat` e estratégia de invalidação após troca de senha.
 - **Critérios de aceite:** token sem assinatura válida, algoritmo diferente,
   segredo ausente, claim ausente ou claim com tipo inválido retorna 401 sem panic.
+- **Evidência:** `go test ./...` e `go vet ./...` executados em 17/09/2026;
+  ambos passaram. Não há testes automatizados no repositório ainda, portanto os
+  casos específicos de JWT permanecem cobertos manualmente/por implementação e
+  devem ser incluídos na Fase 4 (P13).
 
 ### P2. Corrigir recuperação de senha
 
@@ -238,6 +243,7 @@ status, os arquivos afetados e as validações executadas.
 |---|---|---|---|
 | 17/09/2026 | Análise inicial | Riscos e melhorias catalogados; nenhum código alterado | `git status`, leitura do projeto |
 | 17/09/2026 | Documento | Plano criado no projeto | Este arquivo |
+| 17/09/2026 | P1 | JWT endurecido; segredo vazio/curto bloqueia inicialização e claims inválidos retornam 401 | `go test ./...`, `go vet ./...` |
 
 ## Registro de decisões e riscos aceitos
 

@@ -1,6 +1,26 @@
 package config
 
-import "os"
+import (
+	"errors"
+	"os"
+	"strings"
+)
+
+const tamanhoMinimoChaveJWT = 32
+
+// Validar verifica configurações obrigatórias antes de o servidor aceitar
+// requisições autenticadas. Um segredo vazio ou curto tornaria possível forjar
+// tokens com facilidade, então o backend deve falhar ao iniciar nesse caso.
+func Validar() error {
+	segredo := strings.TrimSpace(os.Getenv("JWT_SECRET"))
+	if segredo == "" {
+		return errors.New("JWT_SECRET não configurado")
+	}
+	if len([]byte(segredo)) < tamanhoMinimoChaveJWT {
+		return errors.New("JWT_SECRET deve ter pelo menos 32 bytes")
+	}
+	return nil
+}
 
 // ChaveSecreta e ChaveOCRSpace são FUNÇÕES (não variáveis) de propósito:
 // variável de pacote é avaliada na inicialização do programa, ANTES da

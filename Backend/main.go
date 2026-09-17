@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"controle-estoque/config"
 	"controle-estoque/database"
 	"controle-estoque/handlers"
 	"controle-estoque/middleware"
@@ -16,6 +17,9 @@ import (
 func main() {
 	// Carrega variáveis de ambiente do .env (ex: JWT_SECRET) antes de qualquer outra coisa.
 	godotenv.Load()
+	if err := config.Validar(); err != nil {
+		log.Fatal("configuração inválida: ", err)
+	}
 
 	database.Conectar()
 
