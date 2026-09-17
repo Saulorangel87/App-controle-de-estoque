@@ -313,20 +313,22 @@ status, os arquivos afetados e as validações executadas.
 - **Status:** Em andamento — cobertura crítica inicial criada.
 - **Escopo mínimo:**
   - [x] autenticação e claims JWT;
-  - [ ] isolamento entre usuários;
+  - [x] isolamento entre usuários;
   - [x] validação de quantidades e locais;
   - [ ] retirada concorrente;
-  - [ ] transação/idempotência de nota;
+  - [x] transação/idempotência de nota;
   - [x] limite/validação de URLs SSRF;
-  - [ ] limite de uploads e build do frontend/lint.
+  - [x] limite de dimensão de imagens OCR;
+  - [ ] limite de uploads HTTP e build do frontend/lint.
 - **Critérios de aceite:** testes rodam localmente e no CI, com casos de falha
   reproduzindo os riscos listados neste documento.
 - **Evidência parcial:** criados testes em `Backend/config`,
   `Backend/handlers`, `Backend/middleware` e `Backend/services` cobrindo segredo
   JWT, claims inválidos, algoritmo não permitido, invalidação de token após
-  troca de senha, dados de estoque e allowlist HTTPS. `go test ./...`,
+  troca de senha, dados de estoque, importação transacional/idempotente,
+  isolamento entre usuários e allowlist HTTPS. `go test ./...`,
   `go vet ./...` e `git diff --check` passaram em 17/09/2026. A cobertura de
-  integração, concorrência, idempotência, uploads e frontend ainda precisa ser ampliada.
+  integração de concorrência, limite de uploads e frontend ainda precisa ser ampliada.
 
 ## Ordem de implementação proposta
 
@@ -363,6 +365,8 @@ status, os arquivos afetados e as validações executadas.
 | 17/09/2026 | P2 | Tokens antigos passam a ser invalidados após redefinição por `token_versao` | `go test ./...`, `go vet ./...`, `git diff --check` |
 | 17/09/2026 | P13 | Teste de integração confirma rejeição de token após incremento da versão de sessão | `go test ./...`, `go vet ./...`, `git diff --check` |
 | 17/09/2026 | P14 | Confirmação de exclusão reforçada com cancelamento por Esc e bloqueio contra duplo clique | Revisão do fluxo; build frontend pendente |
+| 17/09/2026 | P13 | Testes de importação cobrem idempotência, rollback e isolamento entre usuários | `go test ./...`, `go vet ./...`, `git diff --check` |
+| 17/09/2026 | P13 | Testes cobrem limite de dimensão para imagens OCR | `go test ./...`, `go vet ./...`, `git diff --check` |
 
 ## Registro de decisões e riscos aceitos
 
