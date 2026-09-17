@@ -398,7 +398,7 @@ status, os arquivos afetados e as validações executadas.
 | 17/09/2026 | P12-A | Execução seguinte: autenticação Tailscale passou, mas o SSH ainda recusou o fingerprint cadastrado | GitHub Actions; `ssh: handshake failed: ssh: host key fingerprint mismatch` |
 | 17/09/2026 | P12-A | Verificação local confirmou a chave ED25519 apresentada pelo IP Tailscale | SSH local sem autenticação; fingerprint `SHA256:H70y+CElKTME1FJYmGNxXQGILhSBDLycqGbGqvpZZbk` |
 | 17/09/2026 | P12 | Revisão da execução #9 confirmou ambiente, secrets e Tailscale; falha permanece na validação do fingerprint pelo `appleboy/ssh-action@v1.0.3` | GitHub Actions #9; issue oficial #275 da action relata o mesmo erro |
-| 17/09/2026 | P12 | Action SSH atualizada para v1.2.5 e fixada no commit `0ff4204d59e8e51228ff73bce53f80d53301dee2` | Release oficial v1.2.5; `git diff --check` pendente |
+| 17/09/2026 | P12 | Action SSH atualizada para v1.2.5 e fixada no commit `0ff4204d59e8e51228ff73bce53f80d53301dee2` | Release oficial v1.2.5; `git diff --check` passou |
 
 ## Registro de decisões e riscos aceitos
 
