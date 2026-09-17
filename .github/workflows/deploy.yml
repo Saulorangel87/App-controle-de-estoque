@@ -104,6 +104,26 @@ jobs:
           cd ~/apps/App-controle-de-estoque
           git pull --ff-only origin main
           sudo docker compose up -d --build
-          curl --fail --silent --show-error --retry 10 --retry-delay 3 http://127.0.0.1:8090/health
-          curl --fail --silent --show-error --retry 10 --retry-delay 3 http://127.0.0.1:8092/
+
+          aguardar_http() {
+            local url="$1"
+            local tentativas=20
+            local tentativa=1
+
+            while [ "$tentativa" -le "$tentativas" ]; do
+              if curl --fail --silent --show-error --max-time 10 "$url"; then
+                return 0
+              fi
+
+              echo "Tentativa $tentativa/$tentativas falhou para $url; aguardando o serviço iniciar..."
+              sleep 3
+              tentativa=$((tentativa + 1))
+            done
+
+            echo "Falha: o serviço não respondeu com sucesso dentro do tempo esperado: $url"
+            return 1
+          }
+
+          aguardar_http http://127.0.0.1:8090/health
+          aguardar_http http://127.0.0.1:8092/
           REMOTE

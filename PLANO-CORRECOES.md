@@ -274,8 +274,8 @@ status, os arquivos afetados e as validações executadas.
 
 ### P12. Reforçar pipeline e reprodutibilidade
 
-- **Status:** Em andamento — deploy migrado para SSH nativo com validação
-  explícita de host; validação no GitHub ainda pendente.
+- **Status:** Em andamento — SSH nativo validado; smoke test precisa tolerar a
+  janela de inicialização dos containers.
 - **Arquivos previstos:** `.github/workflows/deploy.yml`, Dockerfiles.
 - **Ações:**
   - [ ] adicionar testes automatizados e verificações de segurança;
@@ -288,6 +288,8 @@ status, os arquivos afetados e as validações executadas.
   - [x] tornar pull previsível com `git pull --ff-only origin main`;
   - [x] impedir deploys concorrentes com `concurrency`;
   - [x] adicionar smoke tests HTTP para backend e frontend;
+  - [x] repetir qualquer falha de conexão/resposta durante a inicialização,
+    mantendo limite de tentativas e falha definitiva ao esgotá-lo;
   - [x] exigir início manual do workflow e ambiente `production` antes do deploy;
 - **Critérios de aceite:** CI detecta regressões; build usa lockfile; deploy falho
   não é apresentado como concluído.
@@ -403,7 +405,9 @@ status, os arquivos afetados e as validações executadas.
 | 17/09/2026 | P12 | Action SSH atualizada para v1.2.5 e fixada no commit `0ff4204d59e8e51228ff73bce53f80d53301dee2` | Release oficial v1.2.5; `git diff --check` passou |
 | 17/09/2026 | P12 | Execução automática após o commit revelou erro de indentação YAML na linha 63; deploy não chegou a iniciar | GitHub Actions #11; workflow inválido |
 | 17/09/2026 | P12 | Execução #12: YAML e build passaram, mas a action v1.2.5 ainda recusou o fingerprint; `script_stop` também foi identificado como input não suportado | GitHub Actions #12; `host key fingerprint mismatch` e aviso de `script_stop` inesperado |
-| 17/09/2026 | P12 | Deploy migrado para SSH nativo; fingerprint ED25519 é comparado antes da autenticação e o `known_hosts` temporário é usado com verificação estrita | `.github/workflows/deploy.yml`; validação do CI pendente |
+| 17/09/2026 | P12 | Deploy migrado para SSH nativo; fingerprint ED25519 é comparado antes da autenticação e o `known_hosts` temporário é usado com verificação estrita | `.github/workflows/deploy.yml`; execução #13 confirmou SSH, Tailscale e rebuild |
+| 17/09/2026 | P12 | Execução #13 confirmou a conexão privada e a recriação dos containers, mas o primeiro probe recebeu `curl (52) Empty reply from server` durante a inicialização | GitHub Actions #13; ajuste de prontidão pendente |
+| 17/09/2026 | P12 | Smoke tests ajustados para repetir falhas de conexão/resposta por até 20 tentativas antes de falhar | `.github/workflows/deploy.yml`; `git diff --check` pendente |
 
 ## Registro de decisões e riscos aceitos
 
