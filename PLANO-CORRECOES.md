@@ -200,13 +200,20 @@ status, os arquivos afetados e as validações executadas.
 
 ### P10. Manter consulta QR Code segura antes de reativar
 
-- **Status:** Pendente; funcionalidade atualmente desativada.
+- **Status:** Concluído; funcionalidade continua desativada.
 - **Arquivos previstos:** `Backend/services/nfce_scraper.go` e handlers.
-- **Ações:** exigir HTTPS; manter allowlist exata; limitar tamanho da resposta;
-  bloquear redirecionamentos para outros hosts; não reativar scraping sem nova
-  validação do estado real da SEFAZ.
+- **Ações:**
+  - [x] exigir HTTPS e rejeitar userinfo, fragmentos e portas não permitidas;
+  - [x] manter allowlist exata por hostname;
+  - [x] limitar resposta HTML a 2 MB;
+  - [x] bloquear redirecionamentos para hosts/esquemas não permitidos;
+  - [x] não reativar scraping sem nova validação do estado real da SEFAZ.
 - **Critérios de aceite:** testes de SSRF cobrem host, esquema, redirecionamento,
   IP privado e respostas grandes.
+- **Evidência:** validação agora aceita somente HTTPS, allowlist exata e porta
+  443; redirecionamentos passam pela mesma validação e o corpo HTML é limitado.
+  `go test ./...`, `go vet ./...` e `git diff --check` passaram em 17/09/2026.
+  Ainda faltam testes automatizados específicos de SSRF, previstos na P13.
 
 ## Fase 4 — Headers, deploy e qualidade operacional
 
@@ -291,6 +298,7 @@ status, os arquivos afetados e as validações executadas.
 | 17/09/2026 | P3 | Rate limit deixou de confiar em cabeçalhos de IP não verificados | `go test ./...`, `go vet ./...`, `git diff --check` |
 | 17/09/2026 | P8 | Uploads e processamento OCR passaram a ter limites de corpo, imagem, concorrência e resposta | `go test ./...`, `go vet ./...`, `git diff --check` |
 | 17/09/2026 | P9 | Debug de OCR/NFC-e desativado por padrão e protegido por flag | `go test ./...`, `go vet ./...`, `git diff --check` |
+| 17/09/2026 | P10 | QR Code mantido desativado e scraper protegido contra esquemas, redirects e respostas grandes | `go test ./...`, `go vet ./...`, `git diff --check` |
 
 ## Registro de decisões e riscos aceitos
 

@@ -34,6 +34,8 @@ import (
 // avaliado e não tiver esse tipo de proteção, é aqui que ele entraria.
 var dominiosPermitidosNFCe = map[string]bool{}
 
+const tamanhoMaximoHTMLNFCe = 2 << 20 // 2 MB
+
 // Erros que o handler usa para decidir o status HTTP e a mensagem devolvida
 // ao frontend.
 var (
@@ -83,13 +85,19 @@ func validarURL(bruta string) (string, error) {
 	bruta = strings.TrimSpace(bruta)
 
 	analisada, err := url.Parse(bruta)
-	if err != nil || analisada.Host == "" || (analisada.Scheme != "https" && analisada.Scheme != "http") {
+	if err != nil || analisada.Host == "" || analisada.Scheme != "https" ||
+		analisada.User != nil || analisada.Fragment != "" {
 		return "", ErrURLInvalida
 	}
 
-	if !dominiosPermitidosNFCe[analisada.Host] {
+	host := strings.ToLower(analisada.Hostname())
+	if analisada.Port() != "" && analisada.Port() != "443" {
+		return "", ErrURLInvalida
+	}
+	if !dominiosPermitidosNFCe[host] {
 		return "", ErrDominioNaoSuportado
 	}
+	analisada.Host = host
 
 	return analisada.String(), nil
 }
@@ -99,7 +107,13 @@ func validarURL(bruta string) (string, error) {
 // esse cabeçalho por parecerem bots muito simples) e devolve o HTML já
 // carregado no goquery para facilitar a extração.
 func buscarDocumento(urlNota string) (*goquery.Document, error) {
-	cliente := &http.Client{Timeout: 20 * time.Second}
+	cliente := &http.Client{
+		Timeout: 20 * time.Second,
+		CheckRedirect: func(requisicao *http.Request, _ []*http.Request) error {
+			_, err := validarURL(requisicao.URL.String())
+			return err
+		},
+	}
 
 	requisicao, err := http.NewRequest(http.MethodGet, urlNota, nil)
 	if err != nil {
@@ -121,8 +135,11 @@ func buscarDocumento(urlNota string) (*goquery.Document, error) {
 		return nil, fmt.Errorf("%w (status %d)", ErrConsultaFalhou, resposta.StatusCode)
 	}
 
-	corpoBruto, err := io.ReadAll(resposta.Body)
+	corpoBruto, err := io.ReadAll(io.LimitReader(resposta.Body, tamanhoMaximoHTMLNFCe+1))
 	if err != nil {
+		return nil, ErrConsultaFalhou
+	}
+	if len(corpoBruto) > tamanhoMaximoHTMLNFCe {
 		return nil, ErrConsultaFalhou
 	}
 
