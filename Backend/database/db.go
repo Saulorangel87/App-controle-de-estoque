@@ -87,6 +87,11 @@ func migrarColunasSeguranca() {
 			log.Fatal("erro ao migrar coluna resposta_seguranca_hash:", err)
 		}
 	}
+	if !colunaExiste("usuarios", "token_versao") {
+		if _, err := DB.Exec(`ALTER TABLE usuarios ADD COLUMN token_versao INTEGER NOT NULL DEFAULT 0`); err != nil {
+			log.Fatal("erro ao migrar coluna token_versao:", err)
+		}
+	}
 }
 
 // colunaExiste consulta o esquema da tabela (PRAGMA table_info) para saber se

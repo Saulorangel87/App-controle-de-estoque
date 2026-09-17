@@ -54,7 +54,8 @@ status, os arquivos afetados e as validações executadas.
 
 ### P2. Corrigir recuperação de senha
 
-- **Status:** Em andamento — hardening básico concluído; invalidação de sessões pendente.
+- **Status:** Em andamento — invalidação de sessões implementada; modelo de
+  recuperação ainda pode evoluir para código/e-mail.
 - **Arquivos previstos:** `Backend/main.go`, `Backend/handlers/auth.go`,
   `Backend/middleware/ratelimit.go`, frontend de login.
 - **Ações:**
@@ -62,14 +63,16 @@ status, os arquivos afetados e as validações executadas.
   - [ ] reduzir enumeração de usuários com resposta e comportamento uniformes;
   - [x] validar tamanho da nova senha no backend, respeitando o limite do bcrypt;
   - [ ] avaliar substituição da pergunta de segurança por código temporário/e-mail;
-  - [ ] invalidar sessões/tokens existentes após redefinição, se a arquitetura permitir.
+  - [x] invalidar sessões/tokens existentes após redefinição por `token_versao`;
 - **Critérios de aceite:** não é possível enumerar usuários por respostas distintas;
   tentativas repetidas são limitadas; senha inválida é rejeitada pela API.
-- **Evidência parcial:** a consulta da pergunta passou a usar o rate limit por IP
-  e cadastro/redefinição rejeitam senhas com menos de 6 caracteres ou acima de 72
-  bytes. `go test ./...`, `go vet ./...` e `git diff --check` passaram em
-  17/09/2026. A não enumeração completa e a invalidação de tokens ainda exigem
-  trabalho adicional.
+- **Evidência parcial:** a consulta da pergunta passou a usar o rate limit por IP;
+  cadastro/redefinição rejeitam senhas com menos de 6 caracteres ou acima de 72
+  bytes; a tabela `usuarios` ganhou migração de `token_versao`, incluída no JWT
+  e conferida em cada requisição autenticada. Tokens anteriores à migração serão
+  rejeitados e exigirão novo login. `go test ./...`, `go vet ./...` e
+  `git diff --check` passaram em 17/09/2026. Ainda falta evoluir o mecanismo de
+  recuperação para reduzir a dependência da pergunta de segurança.
 
 ### P3. Tornar o rate limit confiável
 
@@ -219,21 +222,25 @@ status, os arquivos afetados e as validações executadas.
 
 ### P14. Exigir confirmação explícita para excluir produto
 
-- **Status:** Pendente.
+- **Status:** Concluído.
 - **Arquivos previstos:** `Frontend/src/pages/Dashboard.jsx`,
   `Frontend/src/components/TabelaItens.jsx`,
   `Frontend/src/components/ModalConfirmacao.jsx` e estilos relacionados.
 - **Ações:**
-  - abrir uma confirmação visível ao clicar em excluir;
-  - deixar claro o nome do produto e que a ação é permanente;
-  - exigir uma ação positiva separada, como botão “Excluir”;
-  - manter “Cancelar” como opção segura e não executar a exclusão ao fechar o modal;
-  - impedir cliques repetidos enquanto a exclusão estiver sendo processada;
-  - garantir foco inicial, foco de teclado e leitura adequada por leitores de tela.
+  - [x] abrir uma confirmação visível ao clicar em excluir;
+  - [x] deixar claro o nome do produto e que a ação é permanente;
+  - [x] exigir uma ação positiva separada, como botão “Excluir”;
+  - [x] manter “Cancelar” como opção segura e não executar a exclusão ao fechar o modal;
+  - [x] impedir cliques repetidos enquanto a exclusão estiver sendo processada;
+  - [x] garantir foco inicial, foco de teclado, `Esc` e leitura adequada por leitores de tela.
 - **Critérios de aceite:** clicar no ícone de exclusão não remove o produto
   imediatamente; somente a confirmação explícita chama o endpoint `DELETE`;
   cancelar, clicar fora ou pressionar `Esc` não exclui o produto; o fluxo funciona
   corretamente em telas pequenas e por teclado.
+- **Evidência:** o fluxo já utilizava `ModalConfirmacao`; o componente foi
+  reforçado para tratar `Escape` como cancelamento e desabilitar os dois botões
+  durante a operação. A validação de build frontend continua pendente devido ao
+  bloqueio do ambiente ao Vite/esbuild.
 
 ### P11. Adicionar headers de segurança no nginx
 
@@ -303,17 +310,23 @@ status, os arquivos afetados e as validações executadas.
 
 ### P13. Criar suíte de testes
 
-- **Status:** Pendente.
+- **Status:** Em andamento — cobertura crítica inicial criada.
 - **Escopo mínimo:**
-  - autenticação e claims JWT;
-  - isolamento entre usuários;
-  - validação de quantidades e locais;
-  - retirada concorrente;
-  - transação/idempotência de nota;
-  - limite de uploads e SSRF;
-  - build do frontend e lint/checagens disponíveis.
+  - [x] autenticação e claims JWT;
+  - [ ] isolamento entre usuários;
+  - [x] validação de quantidades e locais;
+  - [ ] retirada concorrente;
+  - [ ] transação/idempotência de nota;
+  - [x] limite/validação de URLs SSRF;
+  - [ ] limite de uploads e build do frontend/lint.
 - **Critérios de aceite:** testes rodam localmente e no CI, com casos de falha
   reproduzindo os riscos listados neste documento.
+- **Evidência parcial:** criados testes em `Backend/config`,
+  `Backend/handlers`, `Backend/middleware` e `Backend/services` cobrindo segredo
+  JWT, claims inválidos, algoritmo não permitido, invalidação de token após
+  troca de senha, dados de estoque e allowlist HTTPS. `go test ./...`,
+  `go vet ./...` e `git diff --check` passaram em 17/09/2026. A cobertura de
+  integração, concorrência, idempotência, uploads e frontend ainda precisa ser ampliada.
 
 ## Ordem de implementação proposta
 
@@ -346,6 +359,10 @@ status, os arquivos afetados e as validações executadas.
 | 17/09/2026 | P11 | Headers de segurança adicionados ao nginx principal e aos assets | `git diff --check`; validação do container pendente |
 | 17/09/2026 | P12 | CI/deploy usa lockfile, pull previsível, concorrência controlada e smoke tests | `git diff --check`; execução do workflow pendente |
 | 17/09/2026 | P12-A | Workflow passou a conectar runner à Tailscale e validar fingerprint antes do SSH | `.github/workflows/deploy.yml`; secrets/execução pendentes |
+| 17/09/2026 | P13 | Testes unitários iniciais para JWT, validação de estoque e SSRF/allowlist | `go test ./...`, `go vet ./...`, `git diff --check` |
+| 17/09/2026 | P2 | Tokens antigos passam a ser invalidados após redefinição por `token_versao` | `go test ./...`, `go vet ./...`, `git diff --check` |
+| 17/09/2026 | P13 | Teste de integração confirma rejeição de token após incremento da versão de sessão | `go test ./...`, `go vet ./...`, `git diff --check` |
+| 17/09/2026 | P14 | Confirmação de exclusão reforçada com cancelamento por Esc e bloqueio contra duplo clique | Revisão do fluxo; build frontend pendente |
 
 ## Registro de decisões e riscos aceitos
 

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"controle-estoque/config"
+	"controle-estoque/database"
 
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -63,6 +64,19 @@ func Autenticar(proximo http.HandlerFunc) http.HandlerFunc {
 		usuarioID := int(usuarioIDFloat)
 		if float64(usuarioID) != usuarioIDFloat {
 			http.Error(w, "token inválido", http.StatusUnauthorized)
+			return
+		}
+
+		tokenVersao, ok := claimsValidados["token_versao"].(float64)
+		if !ok || tokenVersao < 0 || math.Trunc(tokenVersao) != tokenVersao {
+			http.Error(w, "token inválido", http.StatusUnauthorized)
+			return
+		}
+		var tokenVersaoAtual int
+		if err := database.DB.QueryRow(
+			"SELECT token_versao FROM usuarios WHERE id = ?", usuarioID,
+		).Scan(&tokenVersaoAtual); err != nil || float64(tokenVersaoAtual) != tokenVersao {
+			http.Error(w, "token inválido ou expirado", http.StatusUnauthorized)
 			return
 		}
 

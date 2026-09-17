@@ -1,4 +1,4 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 
 // Modal de confirmação genérico — substitui window.confirm() por algo mais
 // visível e difícil de confirmar sem querer no celular (o confirm() nativo
@@ -13,12 +13,32 @@ export default function ModalConfirmacao({
   aoConfirmar,
 }) {
   const botaoCancelarRef = useRef(null);
+  const [confirmando, setConfirmando] = useState(false);
 
   // Foca no botão CANCELAR (não no de confirmar) — se a pessoa só apertar
   // Enter no reflexo, a ação segura (cancelar) é a que acontece.
   useEffect(() => {
     botaoCancelarRef.current?.focus();
   }, []);
+
+  useEffect(() => {
+    function aoPressionarTecla(evento) {
+      if (evento.key === "Escape" && !confirmando) {
+        aoCancelar();
+      }
+    }
+    document.addEventListener("keydown", aoPressionarTecla);
+    return () => document.removeEventListener("keydown", aoPressionarTecla);
+  }, [aoCancelar, confirmando]);
+
+  async function confirmar() {
+    setConfirmando(true);
+    try {
+      await aoConfirmar();
+    } finally {
+      setConfirmando(false);
+    }
+  }
 
   return (
     <div
@@ -41,6 +61,7 @@ export default function ModalConfirmacao({
             type="button"
             className="botao botao-secundario"
             onClick={aoCancelar}
+            disabled={confirmando}
           >
             Cancelar
           </button>
@@ -48,9 +69,10 @@ export default function ModalConfirmacao({
             type="button"
             className="botao botao-primario"
             style={{ backgroundColor: "var(--cor-perigo)" }}
-            onClick={aoConfirmar}
+            onClick={confirmar}
+            disabled={confirmando}
           >
-            {textoConfirmar}
+            {confirmando ? "Processando..." : textoConfirmar}
           </button>
         </div>
       </div>

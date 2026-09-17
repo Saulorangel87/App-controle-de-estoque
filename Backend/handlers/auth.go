@@ -102,9 +102,9 @@ func Login(w http.ResponseWriter, r *http.Request) {
 
 	var usuario models.Usuario
 	row := database.DB.QueryRow(
-		"SELECT id, nome, senha_hash FROM usuarios WHERE nome = ?", c.Nome,
+		"SELECT id, nome, senha_hash, token_versao FROM usuarios WHERE nome = ?", c.Nome,
 	)
-	if err := row.Scan(&usuario.ID, &usuario.Nome, &usuario.SenhaHash); err != nil {
+	if err := row.Scan(&usuario.ID, &usuario.Nome, &usuario.SenhaHash, &usuario.TokenVersao); err != nil {
 		http.Error(w, "usuário ou senha inválidos", http.StatusUnauthorized)
 		return
 	}
@@ -115,9 +115,10 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"usuario_id": usuario.ID,
-		"nome":       usuario.Nome,
-		"exp":        time.Now().Add(72 * time.Hour).Unix(),
+		"usuario_id":   usuario.ID,
+		"nome":         usuario.Nome,
+		"token_versao": usuario.TokenVersao,
+		"exp":          time.Now().Add(72 * time.Hour).Unix(),
 	})
 
 	tokenAssinado, err := token.SignedString(config.ChaveSecreta())
@@ -200,7 +201,8 @@ func RedefinirSenha(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_, err = database.DB.Exec(
-		"UPDATE usuarios SET senha_hash = ? WHERE id = ?", string(novoHashSenha), usuarioID,
+		"UPDATE usuarios SET senha_hash = ?, token_versao = token_versao + 1 WHERE id = ?",
+		string(novoHashSenha), usuarioID,
 	)
 	if err != nil {
 		http.Error(w, "erro ao atualizar senha", http.StatusInternalServerError)

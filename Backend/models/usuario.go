@@ -6,4 +6,5 @@ type Usuario struct {
 	SenhaHash             string `json:"-"`
 	PerguntaSeguranca     string `json:"pergunta_seguranca"`
 	RespostaSegurancaHash string `json:"-"`
+	TokenVersao           int    `json:"-"`
 }
