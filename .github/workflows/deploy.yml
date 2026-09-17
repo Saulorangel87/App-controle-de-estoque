@@ -1,5 +1,5 @@
 # Workflow de CI/CD do Controle de Estoque
-# Roda automaticamente a cada push na branch main.
+# É iniciado manualmente para evitar publicação automática em produção.
 # Fase 1 (build-and-test) = CI: garante que backend e frontend buildam sem erro.
 # Fase 2 (deploy)         = CD: se a Fase 1 passar, conecta na VM e atualiza o container.
 
@@ -13,8 +13,7 @@ concurrency:
   cancel-in-progress: false
 
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 jobs:
   # ---------- CI: build e checagem, sem tocar em produção ----------
@@ -53,6 +52,7 @@ jobs:
   deploy:
     needs: build-and-test
     runs-on: ubuntu-latest
+    environment: production
     timeout-minutes: 15
     steps:
       - name: Conectar o runner à rede privada Tailscale

@@ -97,7 +97,7 @@ status, os arquivos afetados e as validações executadas.
 
 ### P4. Proteger tokens no frontend
 
-- **Status:** Em andamento — migração implementada; build e validação funcional pendentes.
+- **Status:** Em andamento — migração implementada; validação funcional no container pendente.
 - **Arquivos previstos:** `Frontend/src/context/AuthContext.jsx`,
   `Frontend/src/api/api.js`, backend e nginx.
 - **Ações:**
@@ -113,8 +113,9 @@ status, os arquivos afetados e as validações executadas.
 - **Evidência parcial:** backend emite/valida cookie de sessão e frontend não
   grava mais JWT; a sessão é restaurada por `/sessao`. `go test ./...`,
   `go vet ./...` e `git diff --check` passaram em 17/09/2026. O build frontend
-  segue bloqueado pelo acesso do ambiente ao Vite/esbuild; a proteção CSRF foi
-  adicionada no middleware global para operações mutáveis autenticadas por cookie.
+  passou em 17/09/2026; a proteção CSRF foi adicionada no middleware global para
+  operações mutáveis autenticadas por cookie. A validação funcional no container
+  ainda está pendente.
 
 ## Fase 2 — Integridade do estoque e validação de entrada
 
@@ -267,13 +268,13 @@ status, os arquivos afetados e as validações executadas.
   câmera ou chamadas à API.
 - **Evidência parcial:** adicionados headers de segurança no bloco principal e
   na rota `/assets/` do nginx, evitando perda por herança de `add_header`.
-  `git diff --check` passou em 17/09/2026. O nginx não está instalado no
-  ambiente local, portanto a sintaxe e a validação visual/funcional ainda devem
-  ser confirmadas pelo build do container/CI.
+  `git diff --check` passou em 17/09/2026. O `npm run build` do frontend passou;
+  o nginx/Docker não está disponível localmente, portanto a sintaxe e a
+  validação visual/funcional ainda devem ser confirmadas pelo container/CI.
 
 ### P12. Reforçar pipeline e reprodutibilidade
 
-- **Status:** Em andamento — melhorias aplicadas; pinagem de actions e aprovação manual pendentes.
+- **Status:** Em andamento — aprovação manual aplicada; pinagem de actions pendente.
 - **Arquivos previstos:** `.github/workflows/deploy.yml`, Dockerfiles.
 - **Ações:**
   - [ ] adicionar testes automatizados e verificações de segurança;
@@ -282,7 +283,7 @@ status, os arquivos afetados e as validações executadas.
   - [x] tornar pull previsível com `git pull --ff-only origin main`;
   - [x] impedir deploys concorrentes com `concurrency`;
   - [x] adicionar smoke tests HTTP para backend e frontend;
-  - [ ] avaliar aprovação manual antes do deploy de produção.
+  - [x] exigir início manual do workflow e ambiente `production` antes do deploy;
 - **Critérios de aceite:** CI detecta regressões; build usa lockfile; deploy falho
   não é apresentado como concluído.
 - **Evidência parcial:** Dockerfile passou de `npm install` para `npm ci`; o
@@ -308,8 +309,9 @@ status, os arquivos afetados e as validações executadas.
     `VPS_SSH_KEY` e `VPS_HOST_FINGERPRINT` no ambiente protegido;
   - [ ] restringir a auth key por tag/política somente à VPS e porta 22;
   - [ ] executar workflow e confirmar smoke tests sem abrir a porta 22 pública;
-  - [ ] avaliar trocar o disparo automático por `workflow_dispatch` com
-    aprovação manual antes da produção.
+  - [x] trocar o disparo automático por `workflow_dispatch`;
+  - [x] usar o ambiente `production` para permitir regras de aprovação;
+  - [ ] configurar aprovação obrigatória no ambiente do GitHub.
 - **Critérios de aceite:** o workflow conecta ao tailnet, acessa a VPS pelo
   endereço Tailscale, valida a host key e executa o smoke test; uma execução
   fora do tailnet não alcança a VPS.
@@ -330,7 +332,8 @@ status, os arquivos afetados e as validações executadas.
   - [x] limite/validação de URLs SSRF;
   - [x] limite de dimensão de imagens OCR;
   - [x] limite de uploads HTTP;
-  - [ ] build do frontend/lint.
+  - [x] build do frontend;
+  - [ ] lint do frontend (não existe script `lint` no `package.json`).
 - **Critérios de aceite:** testes rodam localmente e no CI, com casos de falha
   reproduzindo os riscos listados neste documento.
 - **Evidência parcial:** criados testes em `Backend/config`,
@@ -339,7 +342,8 @@ status, os arquivos afetados e as validações executadas.
   troca de senha, dados de estoque, importação transacional/idempotente,
   isolamento entre usuários e allowlist HTTPS. `go test ./...`,
   `go vet ./...` e `git diff --check` passaram em 17/09/2026. A cobertura de
-  frontend ainda precisa ser ampliada.
+  frontend ainda precisa ser ampliada. O build frontend passou em 17/09/2026,
+  com alerta de bundle JavaScript acima de 500 kB.
 
 ## Ordem de implementação proposta
 
@@ -382,6 +386,8 @@ status, os arquivos afetados e as validações executadas.
 | 17/09/2026 | P13 | Teste confirma rejeição de multipart acima de 10 MB | `go test ./... -count=3`, `go vet ./...`, `git diff --check` |
 | 17/09/2026 | P4 | Sessão migrada para cookie HttpOnly e restauração por `/sessao` | `go test ./...`, `go vet ./...`, `git diff --check`; frontend pendente |
 | 17/09/2026 | P4 | Proteção de origem adicionada para operações mutáveis com cookie de sessão | `go test ./...`, `go vet ./...`, `git diff --check` |
+| 17/09/2026 | P4/P11/P13 | Build de produção do frontend passou; Docker/nginx permanece pendente por daemon indisponível | `npm run build` |
+| 17/09/2026 | P12 | Deploy alterado para acionamento manual com ambiente `production` | `.github/workflows/deploy.yml`; execução pendente |
 
 ## Registro de decisões e riscos aceitos
 
