@@ -49,3 +49,10 @@ func ChaveOCRSpace() string {
 func DebugOCRAtivo() bool {
 	return strings.EqualFold(strings.TrimSpace(os.Getenv("DEBUG_OCR")), "true")
 }
+
+// CookieSeguro acompanha o ambiente publicado. Em produção, CORS_ORIGIN deve
+// ser HTTPS; no desenvolvimento local o cookie precisa continuar funcionando
+// sobre HTTP localhost.
+func CookieSeguro() bool {
+	return strings.HasPrefix(strings.ToLower(strings.TrimSpace(os.Getenv("CORS_ORIGIN"))), "https://")
+}

@@ -24,6 +24,7 @@ async function requisitar(caminho, opcoes = {}, token = null) {
 
   const resposta = await fetch(`${URL_BASE}${caminho}`, {
     ...opcoes,
+    credentials: "include",
     headers: cabecalhos,
   });
 
@@ -65,6 +66,14 @@ export function login(nome, senha) {
     method: "POST",
     body: JSON.stringify({ nome, senha }),
   });
+}
+
+export function sessaoAtual() {
+  return requisitar("/sessao", { method: "GET" });
+}
+
+export function encerrarSessao() {
+  return requisitar("/logout", { method: "POST" });
 }
 
 export function obterPerguntaSeguranca(nome) {
@@ -129,6 +138,7 @@ export async function importarNotaFiscal(arquivo, token) {
 
   const resposta = await fetch(`${URL_BASE}/notas-fiscais/importar`, {
     method: "POST",
+    credentials: "include",
     headers: { Authorization: `Bearer ${token}` },
     body: formData,
   });
@@ -151,6 +161,7 @@ export async function importarNotaFiscalPorFoto(arquivo, token) {
 
   const resposta = await fetch(`${URL_BASE}/notas-fiscais/importar-foto`, {
     method: "POST",
+    credentials: "include",
     headers: { Authorization: `Bearer ${token}` },
     body: formData,
   });
@@ -173,6 +184,7 @@ export async function importarNotaFiscalPorFotoDePapel(arquivo, token) {
 
   const resposta = await fetch(`${URL_BASE}/notas-fiscais/importar-foto-papel`, {
     method: "POST",
+    credentials: "include",
     headers: { Authorization: `Bearer ${token}` },
     body: formData,
   });

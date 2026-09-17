@@ -10,6 +10,7 @@ import (
 
 	"controle-estoque/config"
 	"controle-estoque/database"
+	"controle-estoque/middleware"
 	"controle-estoque/models"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -20,6 +21,8 @@ type credenciais struct {
 	Nome  string `json:"nome"`
 	Senha string `json:"senha"`
 }
+
+const nomeCookieSessao = "estoque_sessao"
 
 type cadastroEntrada struct {
 	Nome              string `json:"nome"`
@@ -127,7 +130,48 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(map[string]string{"token": tokenAssinado})
+	http.SetCookie(w, &http.Cookie{
+		Name:     nomeCookieSessao,
+		Value:    tokenAssinado,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   config.CookieSeguro(),
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   72 * 60 * 60,
+	})
+	json.NewEncoder(w).Encode(map[string]string{"nome": usuario.Nome})
+}
+
+// SessaoAtual permite ao frontend restaurar a sessão sem receber o JWT no
+// JavaScript. O middleware já validou o cookie antes de chegar aqui.
+func SessaoAtual(w http.ResponseWriter, r *http.Request) {
+	usuarioID := r.Context().Value(middleware.UsuarioIDContexto).(int)
+	var nome string
+	if err := database.DB.QueryRow("SELECT nome FROM usuarios WHERE id = ?", usuarioID).Scan(&nome); err != nil {
+		http.Error(w, "sessão inválida", http.StatusUnauthorized)
+		return
+	}
+	json.NewEncoder(w).Encode(map[string]string{"nome": nome})
+}
+
+func EncerrarSessao(w http.ResponseWriter, r *http.Request) {
+	usuarioID := r.Context().Value(middleware.UsuarioIDContexto).(int)
+	if _, err := database.DB.Exec(
+		"UPDATE usuarios SET token_versao = token_versao + 1 WHERE id = ?", usuarioID,
+	); err != nil {
+		http.Error(w, "erro ao encerrar sessão", http.StatusInternalServerError)
+		return
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name:     nomeCookieSessao,
+		Value:    "",
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   config.CookieSeguro(),
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   -1,
+	})
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // ObterPerguntaSeguranca devolve a pergunta de segurança cadastrada para um usuário,

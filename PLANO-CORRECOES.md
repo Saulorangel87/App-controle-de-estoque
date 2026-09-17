@@ -97,14 +97,24 @@ status, os arquivos afetados e as validações executadas.
 
 ### P4. Proteger tokens no frontend
 
-- **Status:** Pendente — melhoria arquitetural.
+- **Status:** Em andamento — migração implementada; build e validação funcional pendentes.
 - **Arquivos previstos:** `Frontend/src/context/AuthContext.jsx`,
   `Frontend/src/api/api.js`, backend e nginx.
-- **Ações:** avaliar migração de JWT em `localStorage` para cookie `HttpOnly`,
-  `Secure`, `SameSite` e proteção CSRF; se a migração não for imediata, reduzir
-  exposição e documentar o risco residual.
+- **Ações:**
+  - [x] emitir JWT em cookie `HttpOnly`, `SameSite=Lax` e `Secure` em produção;
+  - [x] remover persistência do JWT no `localStorage` do frontend;
+  - [x] restaurar sessão por endpoint autenticado `/sessao`;
+  - [x] enviar credenciais em chamadas da API e habilitar CORS credentials;
+  - [x] limpar cookie e invalidar a versão da sessão no logout;
+  - [x] proteger métodos mutáveis autenticados por cookie com validação da origem;
+  - [ ] validar login, reload, logout, expiração e PWA no build/container.
 - **Critérios de aceite:** decisão arquitetural registrada e fluxo de login,
   logout, expiração e renovação coberto por testes.
+- **Evidência parcial:** backend emite/valida cookie de sessão e frontend não
+  grava mais JWT; a sessão é restaurada por `/sessao`. `go test ./...`,
+  `go vet ./...` e `git diff --check` passaram em 17/09/2026. O build frontend
+  segue bloqueado pelo acesso do ambiente ao Vite/esbuild; a proteção CSRF foi
+  adicionada no middleware global para operações mutáveis autenticadas por cookie.
 
 ## Fase 2 — Integridade do estoque e validação de entrada
 
@@ -319,7 +329,8 @@ status, os arquivos afetados e as validações executadas.
   - [x] transação/idempotência de nota;
   - [x] limite/validação de URLs SSRF;
   - [x] limite de dimensão de imagens OCR;
-  - [ ] limite de uploads HTTP e build do frontend/lint.
+  - [x] limite de uploads HTTP;
+  - [ ] build do frontend/lint.
 - **Critérios de aceite:** testes rodam localmente e no CI, com casos de falha
   reproduzindo os riscos listados neste documento.
 - **Evidência parcial:** criados testes em `Backend/config`,
@@ -328,7 +339,7 @@ status, os arquivos afetados e as validações executadas.
   troca de senha, dados de estoque, importação transacional/idempotente,
   isolamento entre usuários e allowlist HTTPS. `go test ./...`,
   `go vet ./...` e `git diff --check` passaram em 17/09/2026. A cobertura de
-  limite de uploads e frontend ainda precisa ser ampliada.
+  frontend ainda precisa ser ampliada.
 
 ## Ordem de implementação proposta
 
@@ -368,6 +379,9 @@ status, os arquivos afetados e as validações executadas.
 | 17/09/2026 | P13 | Testes de importação cobrem idempotência, rollback e isolamento entre usuários | `go test ./...`, `go vet ./...`, `git diff --check` |
 | 17/09/2026 | P13 | Testes cobrem limite de dimensão para imagens OCR | `go test ./...`, `go vet ./...`, `git diff --check` |
 | 17/09/2026 | P13 | Teste concorrente cobre duas retiradas sem perda ou estoque negativo | `go test ./... -count=5`, `go vet ./...`, `git diff --check` |
+| 17/09/2026 | P13 | Teste confirma rejeição de multipart acima de 10 MB | `go test ./... -count=3`, `go vet ./...`, `git diff --check` |
+| 17/09/2026 | P4 | Sessão migrada para cookie HttpOnly e restauração por `/sessao` | `go test ./...`, `go vet ./...`, `git diff --check`; frontend pendente |
+| 17/09/2026 | P4 | Proteção de origem adicionada para operações mutáveis com cookie de sessão | `go test ./...`, `go vet ./...`, `git diff --check` |
 
 ## Registro de decisões e riscos aceitos
 

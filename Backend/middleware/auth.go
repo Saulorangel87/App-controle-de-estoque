@@ -21,8 +21,12 @@ func Autenticar(proximo http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		cabecalho := r.Header.Get("Authorization")
 		if cabecalho == "" {
-			http.Error(w, "token não informado", http.StatusUnauthorized)
-			return
+			cookie, err := r.Cookie("estoque_sessao")
+			if err != nil || cookie.Value == "" {
+				http.Error(w, "token não informado", http.StatusUnauthorized)
+				return
+			}
+			cabecalho = "Bearer " + cookie.Value
 		}
 
 		partes := strings.Split(cabecalho, " ")

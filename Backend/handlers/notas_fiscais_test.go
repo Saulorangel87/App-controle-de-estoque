@@ -5,6 +5,8 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -132,5 +134,30 @@ func TestConfirmarImportacaoNaoAcessaItemDeOutroUsuario(t *testing.T) {
 	}
 	if quantidade != 8 {
 		t.Fatalf("quantidade do outro usuário = %v; esperada 8", quantidade)
+	}
+}
+
+func TestImportarNotaFiscalRejeitaCorpoAcimaDoLimite(t *testing.T) {
+	var corpo bytes.Buffer
+	formulario := multipart.NewWriter(&corpo)
+	arquivo, err := formulario.CreateFormFile("arquivo", "nota.xml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := io.Copy(arquivo, bytes.NewReader(make([]byte, tamanhoMaximoUpload))); err != nil {
+		t.Fatal(err)
+	}
+	if err := formulario.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	requisicao := httptest.NewRequest(http.MethodPost, "/notas-fiscais/importar", &corpo)
+	requisicao.Header.Set("Content-Type", formulario.FormDataContentType())
+	contexto := context.WithValue(requisicao.Context(), middleware.UsuarioIDContexto, 1)
+	resposta := httptest.NewRecorder()
+	ImportarNotaFiscal(resposta, requisicao.WithContext(contexto))
+
+	if resposta.Code != http.StatusBadRequest {
+		t.Fatalf("upload acima do limite retornou %d; esperado 400", resposta.Code)
 	}
 }

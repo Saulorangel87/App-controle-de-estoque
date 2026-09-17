@@ -1,5 +1,5 @@
-import { createContext, useContext, useState, useCallback, useMemo } from "react";
-import { decodificarToken } from "../utils/jwt.js";
+import { createContext, useContext, useState, useCallback, useEffect } from "react";
+import { encerrarSessao, sessaoAtual } from "../api/api.js";
 
 const AuthContext = createContext(null);
 
@@ -8,32 +8,39 @@ const AuthContext = createContext(null);
 const CHAVE_ARMAZENAMENTO = "controle-estoque:token";
 
 export function AuthProvider({ children }) {
-  const [token, setToken] = useState(() =>
-    localStorage.getItem(CHAVE_ARMAZENAMENTO)
-  );
+  const [token] = useState(null);
+  const [nome, setNome] = useState("");
+  const [estaLogado, setEstaLogado] = useState(false);
+  const [carregandoSessao, setCarregandoSessao] = useState(true);
 
-  const entrar = useCallback((novoToken) => {
-    localStorage.setItem(CHAVE_ARMAZENAMENTO, novoToken);
-    setToken(novoToken);
+  useEffect(() => {
+    localStorage.removeItem(CHAVE_ARMAZENAMENTO);
+    sessaoAtual()
+      .then((sessao) => {
+        setNome(sessao.nome ?? "");
+        setEstaLogado(true);
+      })
+      .catch(() => setEstaLogado(false))
+      .finally(() => setCarregandoSessao(false));
+  }, []);
+
+  const entrar = useCallback((nomeUsuario) => {
+    setNome(nomeUsuario ?? "");
+    setEstaLogado(true);
   }, []);
 
   const sair = useCallback(() => {
-    localStorage.removeItem(CHAVE_ARMAZENAMENTO);
-    setToken(null);
+    encerrarSessao().catch(() => {}).finally(() => {
+      setNome("");
+      setEstaLogado(false);
+    });
   }, []);
-
-  // O nome do usuário já vem dentro do próprio token (claim "nome"), definido
-  // no login pelo backend — não precisamos de uma chamada extra à API só para exibir isso.
-  const nome = useMemo(() => {
-    if (!token) return "";
-    const payload = decodificarToken(token);
-    return payload?.nome ?? "";
-  }, [token]);
 
   const valor = {
     token,
     nome,
-    estaLogado: Boolean(token),
+    estaLogado,
+    carregandoSessao,
     entrar,
     sair,
   };

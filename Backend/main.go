@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"controle-estoque/config"
@@ -34,6 +35,8 @@ func main() {
 	// certos nunca são bloqueados, só sequências de erro.
 	mux.HandleFunc("POST /cadastro", middleware.LimitarTentativas(handlers.Cadastrar))
 	mux.HandleFunc("POST /login", middleware.LimitarTentativas(handlers.Login))
+	mux.HandleFunc("GET /sessao", middleware.Autenticar(handlers.SessaoAtual))
+	mux.HandleFunc("POST /logout", middleware.Autenticar(handlers.EncerrarSessao))
 	mux.HandleFunc("GET /recuperar-senha/pergunta", middleware.LimitarTentativas(handlers.ObterPerguntaSeguranca))
 	mux.HandleFunc("POST /recuperar-senha", middleware.LimitarTentativas(handlers.RedefinirSenha))
 
@@ -70,7 +73,7 @@ func main() {
 	// uma API externa, que pode legitimamente levar alguns segundos.
 	servidor := &http.Server{
 		Addr:              ":8080",
-		Handler:           corsMiddleware(mux),
+		Handler:           corsMiddleware(protegerCSRF(mux)),
 		ReadTimeout:       30 * time.Second,
 		ReadHeaderTimeout: 10 * time.Second,
 		WriteTimeout:      45 * time.Second,
@@ -81,6 +84,27 @@ func main() {
 	if err := servidor.ListenAndServe(); err != nil {
 		log.Fatal(err)
 	}
+}
+
+// protegerCSRF exige a origem configurada para operações mutáveis que usam o
+// cookie de sessão. Chamadas sem cookie (por exemplo, login ou clientes que
+// ainda usam Authorization) mantêm o comportamento anterior; o cookie também
+// usa SameSite=Lax como segunda camada.
+func protegerCSRF(proximo http.Handler) http.Handler {
+	origemEsperada := os.Getenv("CORS_ORIGIN")
+	if origemEsperada == "" {
+		origemEsperada = "http://localhost:5173"
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mutavel := r.Method == http.MethodPost || r.Method == http.MethodPut || r.Method == http.MethodDelete
+		_, erroCookie := r.Cookie("estoque_sessao")
+		temCookie := erroCookie == nil
+		if mutavel && temCookie && strings.TrimSpace(r.Header.Get("Origin")) != origemEsperada {
+			http.Error(w, "origem não permitida", http.StatusForbidden)
+			return
+		}
+		proximo.ServeHTTP(w, r)
+	})
 }
 
 // corsMiddleware libera as requisições vindas do frontend. A origem permitida vem da
@@ -96,6 +120,7 @@ func corsMiddleware(proximo http.Handler) http.Handler {
 		w.Header().Set("Access-Control-Allow-Origin", origem)
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
 
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)

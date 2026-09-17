@@ -64,10 +64,10 @@ export default function Login() {
         // obrigar a pessoa a digitar tudo de novo.
         await cadastrar(nome, senha, perguntaSeguranca, respostaSeguranca);
         const resultado = await login(nome, senha);
-        entrar(resultado.token);
+        entrar(resultado.nome);
       } else {
         const resultado = await login(nome, senha);
-        entrar(resultado.token);
+        entrar(resultado.nome);
       }
       navegar("/");
     } catch (e) {
