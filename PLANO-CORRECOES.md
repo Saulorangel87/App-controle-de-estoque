@@ -256,16 +256,50 @@ status, os arquivos afetados e as validações executadas.
 
 ### P12. Reforçar pipeline e reprodutibilidade
 
-- **Status:** Pendente.
+- **Status:** Em andamento — melhorias aplicadas; pinagem de actions e aprovação manual pendentes.
 - **Arquivos previstos:** `.github/workflows/deploy.yml`, Dockerfiles.
 - **Ações:**
-  - adicionar testes automatizados e verificações de segurança;
-  - preferir `npm ci` no Dockerfile;
-  - fixar actions por versão segura ou SHA após revisão;
-  - tornar pull/deploy previsível e adicionar smoke test pós-deploy;
-  - avaliar aprovação manual antes do deploy de produção.
+  - [ ] adicionar testes automatizados e verificações de segurança;
+  - [x] usar `npm ci` no Dockerfile e no CI;
+  - [ ] fixar actions por SHA após revisão das versões;
+  - [x] tornar pull previsível com `git pull --ff-only origin main`;
+  - [x] impedir deploys concorrentes com `concurrency`;
+  - [x] adicionar smoke tests HTTP para backend e frontend;
+  - [ ] avaliar aprovação manual antes do deploy de produção.
 - **Critérios de aceite:** CI detecta regressões; build usa lockfile; deploy falho
   não é apresentado como concluído.
+- **Evidência parcial:** Dockerfile passou de `npm install` para `npm ci`; o
+  workflow recebeu permissões mínimas de leitura, timeout, concorrência, pull
+  fast-forward-only e probes pós-deploy. `git diff --check` passou em
+  17/09/2026. O workflow não foi executado nesta sessão e não houve deploy.
+
+#### P12-A. Acesso privado da VPS via Tailscale
+
+- **Status:** Em andamento — workflow ajustado; configuração dos secrets e
+  execução real ainda pendentes.
+- **Constatação:** o IP informado (`100.67.151.30`) é um endereço Tailscale.
+  O workflow anterior usava runner GitHub hospedado e SSH direto, sem conectar
+  o runner ao tailnet; por isso não funcionaria com a porta 22 pública fechada.
+- **Ações:**
+  - [x] conectar o runner temporariamente à Tailscale com
+    `tailscale/github-action@v4`;
+  - [x] usar `VPS_HOST` como host Tailscale, sem gravar o IP no código;
+  - [x] usar secrets separados para `VPS_USER` e `VPS_SSH_KEY`;
+  - [x] validar fingerprint SHA-256 com `VPS_HOST_FINGERPRINT`;
+  - [x] manter SSH na porta 22 privada;
+  - [ ] criar/configurar `TAILSCALE_AUTHKEY`, `VPS_HOST`, `VPS_USER`,
+    `VPS_SSH_KEY` e `VPS_HOST_FINGERPRINT` no ambiente protegido;
+  - [ ] restringir a auth key por tag/política somente à VPS e porta 22;
+  - [ ] executar workflow e confirmar smoke tests sem abrir a porta 22 pública;
+  - [ ] avaliar trocar o disparo automático por `workflow_dispatch` com
+    aprovação manual antes da produção.
+- **Critérios de aceite:** o workflow conecta ao tailnet, acessa a VPS pelo
+  endereço Tailscale, valida a host key e executa o smoke test; uma execução
+  fora do tailnet não alcança a VPS.
+- **Atenção de segurança:** foi localizada uma anotação local fora deste
+  projeto contendo credenciais junto das instruções de SSH. Os valores não
+  foram reproduzidos nem adicionados ao repositório. Rotacionar os segredos
+  expostos e remover cópias inseguras após confirmar que não são necessárias.
 
 ### P13. Criar suíte de testes
 
@@ -310,6 +344,8 @@ status, os arquivos afetados e as validações executadas.
 | 17/09/2026 | P9 | Debug de OCR/NFC-e desativado por padrão e protegido por flag | `go test ./...`, `go vet ./...`, `git diff --check` |
 | 17/09/2026 | P10 | QR Code mantido desativado e scraper protegido contra esquemas, redirects e respostas grandes | `go test ./...`, `go vet ./...`, `git diff --check` |
 | 17/09/2026 | P11 | Headers de segurança adicionados ao nginx principal e aos assets | `git diff --check`; validação do container pendente |
+| 17/09/2026 | P12 | CI/deploy usa lockfile, pull previsível, concorrência controlada e smoke tests | `git diff --check`; execução do workflow pendente |
+| 17/09/2026 | P12-A | Workflow passou a conectar runner à Tailscale e validar fingerprint antes do SSH | `.github/workflows/deploy.yml`; secrets/execução pendentes |
 
 ## Registro de decisões e riscos aceitos
 

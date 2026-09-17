@@ -5,6 +5,13 @@
 
 name: Deploy Controle de Estoque
 
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-controle-estoque-main
+  cancel-in-progress: false
+
 on:
   push:
     branches: [main]
@@ -13,6 +20,7 @@ jobs:
   # ---------- CI: build e checagem, sem tocar em produção ----------
   build-and-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Baixar o código do repositório
         uses: actions/checkout@v4
@@ -45,16 +53,29 @@ jobs:
   deploy:
     needs: build-and-test
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
+      - name: Conectar o runner à rede privada Tailscale
+        uses: tailscale/github-action@v4
+        with:
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+          ping: ${{ secrets.VPS_HOST }}
+
       - name: Conectar na Oracle Cloud via SSH e atualizar o container
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USERNAME }}
-          key: ${{ secrets.SSH_KEY }}
-          # se você usa uma porta SSH diferente da 22, adicione:
-          # port: ${{ secrets.SSH_PORT }}
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          fingerprint: ${{ secrets.VPS_HOST_FINGERPRINT }}
+          port: 22
+          timeout: 60s
+          command_timeout: 10m
+          script_stop: true
           script: |
+            set -e
             cd ~/apps/App-controle-de-estoque
-            git pull
+            git pull --ff-only origin main
             sudo docker compose up -d --build
+            curl --fail --silent --show-error --retry 10 --retry-delay 3 http://127.0.0.1:8090/health
+            curl --fail --silent --show-error --retry 10 --retry-delay 3 http://127.0.0.1:8092/
