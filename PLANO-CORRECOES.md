@@ -54,17 +54,22 @@ status, os arquivos afetados e as validações executadas.
 
 ### P2. Corrigir recuperação de senha
 
-- **Status:** Pendente.
+- **Status:** Em andamento — hardening básico concluído; invalidação de sessões pendente.
 - **Arquivos previstos:** `Backend/main.go`, `Backend/handlers/auth.go`,
   `Backend/middleware/ratelimit.go`, frontend de login.
 - **Ações:**
-  - aplicar rate limit também à consulta da pergunta;
-  - reduzir enumeração de usuários com resposta e comportamento uniformes;
-  - validar força e tamanho da nova senha no backend;
-  - avaliar substituição da pergunta de segurança por código temporário/e-mail;
-  - invalidar sessões/tokens existentes após redefinição, se a arquitetura permitir.
+  - [x] aplicar rate limit também à consulta da pergunta;
+  - [ ] reduzir enumeração de usuários com resposta e comportamento uniformes;
+  - [x] validar tamanho da nova senha no backend, respeitando o limite do bcrypt;
+  - [ ] avaliar substituição da pergunta de segurança por código temporário/e-mail;
+  - [ ] invalidar sessões/tokens existentes após redefinição, se a arquitetura permitir.
 - **Critérios de aceite:** não é possível enumerar usuários por respostas distintas;
   tentativas repetidas são limitadas; senha inválida é rejeitada pela API.
+- **Evidência parcial:** a consulta da pergunta passou a usar o rate limit por IP
+  e cadastro/redefinição rejeitam senhas com menos de 6 caracteres ou acima de 72
+  bytes. `go test ./...`, `go vet ./...` e `git diff --check` passaram em
+  17/09/2026. A não enumeração completa e a invalidação de tokens ainda exigem
+  trabalho adicional.
 
 ### P3. Tornar o rate limit confiável
 
@@ -263,6 +268,7 @@ status, os arquivos afetados e as validações executadas.
 | 17/09/2026 | P5 | Validação server-side de números, limites, textos, locais e importação | `go test ./...`, `go vet ./...` |
 | 17/09/2026 | P6 | Retirada de estoque convertida para atualização atômica | `go test ./...`, `go vet ./...`, `git diff --check` |
 | 17/09/2026 | P7 | Confirmação de nota transacional, com rollback e idempotência por usuário | `go test ./...`, `go vet ./...`; build frontend bloqueado pelo ambiente |
+| 17/09/2026 | P2 | Rate limit aplicado à pergunta e validação de senha adicionada no backend | `go test ./...`, `go vet ./...`, `git diff --check` |
 
 ## Registro de decisões e riscos aceitos
 

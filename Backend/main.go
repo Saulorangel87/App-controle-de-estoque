@@ -34,7 +34,7 @@ func main() {
 	// certos nunca são bloqueados, só sequências de erro.
 	mux.HandleFunc("POST /cadastro", middleware.LimitarTentativas(handlers.Cadastrar))
 	mux.HandleFunc("POST /login", middleware.LimitarTentativas(handlers.Login))
-	mux.HandleFunc("GET /recuperar-senha/pergunta", handlers.ObterPerguntaSeguranca)
+	mux.HandleFunc("GET /recuperar-senha/pergunta", middleware.LimitarTentativas(handlers.ObterPerguntaSeguranca))
 	mux.HandleFunc("POST /recuperar-senha", middleware.LimitarTentativas(handlers.RedefinirSenha))
 
 	// Itens (todas exigem token válido via middleware.Autenticar).

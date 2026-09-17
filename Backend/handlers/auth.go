@@ -2,9 +2,11 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"controle-estoque/config"
 	"controle-estoque/database"
@@ -26,6 +28,21 @@ type cadastroEntrada struct {
 	RespostaSeguranca string `json:"resposta_seguranca"`
 }
 
+const (
+	tamanhoMinimoSenha      = 6
+	tamanhoMaximoSenhaBytes = 72 // limite efetivo aceito pelo bcrypt
+)
+
+func validarSenha(senha string) error {
+	if utf8.RuneCountInString(senha) < tamanhoMinimoSenha {
+		return errors.New("a senha deve ter pelo menos 6 caracteres")
+	}
+	if len([]byte(senha)) > tamanhoMaximoSenhaBytes {
+		return errors.New("a senha excede o limite permitido")
+	}
+	return nil
+}
+
 // normalizarResposta remove espaços nas pontas e ignora maiúsculas/minúsculas,
 // para que "Rex", "rex " e "REX" sejam todos aceitos como a mesma resposta.
 func normalizarResposta(resposta string) string {
@@ -41,6 +58,10 @@ func Cadastrar(w http.ResponseWriter, r *http.Request) {
 
 	if c.Nome == "" || c.Senha == "" || c.PerguntaSeguranca == "" || c.RespostaSeguranca == "" {
 		http.Error(w, "nome, senha, pergunta e resposta de segurança são obrigatórios", http.StatusBadRequest)
+		return
+	}
+	if err := validarSenha(c.Senha); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -148,6 +169,10 @@ func RedefinirSenha(w http.ResponseWriter, r *http.Request) {
 
 	if e.Nome == "" || e.Resposta == "" || e.NovaSenha == "" {
 		http.Error(w, "nome, resposta e nova senha são obrigatórios", http.StatusBadRequest)
+		return
+	}
+	if err := validarSenha(e.NovaSenha); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
