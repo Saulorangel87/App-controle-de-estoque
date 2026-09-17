@@ -274,14 +274,13 @@ status, os arquivos afetados e as validações executadas.
 
 ### P12. Reforçar pipeline e reprodutibilidade
 
-- **Status:** Em andamento — deploy privado validado; ainda faltam fixar todas
-  as actions por SHA, ampliar verificações de segurança e tratar os avisos do
-  CI.
+- **Status:** Em andamento — actions revisadas e fixadas por SHA; falta validar
+  o CI com as novas versões e ampliar as verificações de segurança.
 - **Arquivos previstos:** `.github/workflows/deploy.yml`, Dockerfiles.
 - **Ações:**
   - [ ] adicionar testes automatizados e verificações de segurança;
   - [x] usar `npm ci` no Dockerfile e no CI;
-  - [ ] fixar actions por SHA após revisão das versões;
+  - [x] fixar actions por SHA após revisão das versões;
   - [x] avaliar `appleboy/ssh-action` e identificar incompatibilidade persistente
     de fingerprint;
   - [x] substituir a action por SSH nativo com `ssh-keyscan`, comparação de
@@ -298,7 +297,8 @@ status, os arquivos afetados e as validações executadas.
   workflow recebeu permissões mínimas de leitura, timeout, concorrência, pull
   fast-forward-only, espera de prontidão e probes pós-deploy. `git diff
   --check` passou em 17/09/2026. A execução #14 confirmou o deploy privado;
-  permanecem avisos não bloqueantes de Node.js/cache para tratar.
+  as actions foram atualizadas para runtime Node 24 e o cache Go foi apontado
+  para `Backend/go.sum`; falta confirmar a remoção dos avisos no próximo CI.
 
 #### P12-A. Acesso privado da VPS via Tailscale
 
@@ -414,6 +414,7 @@ status, os arquivos afetados e as validações executadas.
 | 17/09/2026 | P12 | Execução #14 passou com build, Tailscale, SSH nativo, fingerprint, rebuild Docker e smoke tests HTTP | GitHub Actions #14; status `Success` em 1m37s |
 | 17/09/2026 | P12 | O retry explícito dos smoke tests absorveu a janela de inicialização sem mascarar falha definitiva | GitHub Actions #14; job `deploy` concluído em 12s |
 | 17/09/2026 | P12 | Permanecem dois avisos não bloqueantes no CI: actions forçadas para Node.js 24 e cache Go sem `go.sum` na raiz | GitHub Actions #14; melhoria futura recomendada |
+| 17/09/2026 | P12 | Actions atualizadas e fixadas por SHA: checkout v7.0.1, setup-go v7.0.0, setup-node v7.0.0 e Tailscale v4.1.3; cache Go apontado para `Backend/go.sum` | `.github/workflows/deploy.yml`; validação no próximo CI |
 
 ## Registro de decisões e riscos aceitos
 

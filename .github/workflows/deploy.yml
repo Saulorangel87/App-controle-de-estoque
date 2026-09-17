@@ -22,12 +22,13 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Baixar o código do repositório
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Configurar Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: "1.26.5" # confirmado no go.mod do projeto
+          cache-dependency-path: ./Backend/go.sum
 
       - name: Buildar e checar o backend (Go)
         working-directory: ./Backend # ajuste se a pasta tiver outro nome
@@ -36,7 +37,7 @@ jobs:
           go vet ./...
 
       - name: Configurar Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "20"
           cache: "npm"
@@ -56,7 +57,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Conectar o runner à rede privada Tailscale
-        uses: tailscale/github-action@v4
+        uses: tailscale/github-action@780049a30b6ff5c378a9e7b389d15ece7a204888 # v4.1.3
         with:
           authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
           ping: ${{ secrets.VPS_HOST }}
