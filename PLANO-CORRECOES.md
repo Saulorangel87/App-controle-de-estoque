@@ -306,9 +306,8 @@ status, os arquivos afetados e as validações executadas.
 
 #### P12-A. Acesso privado da VPS via Tailscale
 
-- **Status:** Em andamento — acesso privado e deploy anteriores validados; OAuth
-  configurado no Tailscale, secrets cadastrados e workflow migrado; falta validar
-  a nova autenticação em uma execução.
+- **Status:** Concluído — OAuth, acesso privado e deploy foram validados em
+  execução bem-sucedida do workflow.
 - **Constatação:** o IP informado (`100.67.151.30`) é um endereço Tailscale.
   O workflow anterior usava runner GitHub hospedado e SSH direto, sem conectar
   o runner ao tailnet; por isso não funcionaria com a porta 22 pública fechada.
@@ -328,7 +327,7 @@ status, os arquivos afetados e as validações executadas.
     ambiente `production`;
   - [x] migrar o workflow de `authkey` para OAuth client com a tag exclusiva do
     runner, mantendo o acesso privado à VPS pela porta 22;
-  - [ ] executar o workflow migrado e confirmar Tailscale, SSH privado,
+  - [x] executar o workflow migrado e confirmar Tailscale, SSH privado,
     fingerprint e smoke tests;
   - [x] usar auth key reutilizável e efêmera, adequada a runners descartáveis do GitHub Actions;
   - [x] executar workflow e confirmar smoke tests sem abrir a porta 22 pública;
@@ -435,6 +434,7 @@ status, os arquivos afetados e as validações executadas.
 | 17/09/2026 | P12-A | Execução #16 confirmou novamente Tailscale, SSH privado, fingerprint e smoke tests; permanece somente o aviso de depreciação do `authkey` | GitHub Actions #16; job `deploy` concluído em 15s |
 | 17/09/2026 | P12-A | Tag `tag:github-actions` criada; credencial OAuth perdida revogada e nova credencial gerada com escopo mínimo `auth_keys: Write`; segredos não registrados no projeto | Console Tailscale; cadastro dos secrets e validação do workflow pendentes |
 | 17/09/2026 | P12-A | Secrets `TAILSCALE_OAUTH_CLIENT_ID` e `TAILSCALE_OAUTH_SECRET` cadastrados no ambiente `production`; workflow migrado para OAuth com a tag exclusiva | GitHub Environment e `.github/workflows/deploy.yml`; execução de validação pendente |
+| 17/09/2026 | P12-A | Execução #17 passou após a migração para OAuth; `build-and-test` em 28s, `deploy` em 21s e duração total de 1m44s | [GitHub Actions #17](https://github.com/Saulorangel87/App-controle-de-estoque/actions/runs/35286690984); status `Success` |
 
 ## Registro de decisões e riscos aceitos
 
