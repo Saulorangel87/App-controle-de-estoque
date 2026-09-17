@@ -113,12 +113,18 @@ status, os arquivos afetados e as validações executadas.
 
 ### P6. Tornar retirada atômica
 
-- **Status:** Pendente.
+- **Status:** Concluído.
 - **Arquivos previstos:** `Backend/handlers/itens.go`.
-- **Ações:** substituir o fluxo leitura-depois-atualização por operação atômica,
-  mantendo o estoque em zero e verificando linhas afetadas.
+- **Ações:**
+  - [x] substituir o fluxo leitura-depois-atualização por operação atômica;
+  - [x] manter o estoque em zero;
+  - [x] verificar linhas afetadas e retornar 404 para item inexistente;
+  - [x] consultar e devolver a quantidade atualizada após a operação.
 - **Critérios de aceite:** retiradas concorrentes não perdem movimentações e nunca
   deixam o estoque abaixo de zero.
+- **Evidência:** `RetirarItem` agora executa a subtração e o limite inferior na
+  mesma instrução `UPDATE`. `go test ./...`, `go vet ./...` e `git diff --check`
+  passaram em 17/09/2026.
 
 ### P7. Tornar confirmação de nota transacional e idempotente
 
@@ -249,6 +255,7 @@ status, os arquivos afetados e as validações executadas.
 | 17/09/2026 | Documento | Plano criado no projeto | Este arquivo |
 | 17/09/2026 | P1 | JWT endurecido; segredo vazio/curto bloqueia inicialização e claims inválidos retornam 401 | `go test ./...`, `go vet ./...` |
 | 17/09/2026 | P5 | Validação server-side de números, limites, textos, locais e importação | `go test ./...`, `go vet ./...` |
+| 17/09/2026 | P6 | Retirada de estoque convertida para atualização atômica | `go test ./...`, `go vet ./...`, `git diff --check` |
 
 ## Registro de decisões e riscos aceitos
 

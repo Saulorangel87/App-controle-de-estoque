@@ -155,26 +155,34 @@ func RetirarItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var quantidadeAtual float64
-	row := database.DB.QueryRow(
-		"SELECT quantidade FROM itens WHERE id = ? AND usuario_id = ?", id, usuarioID,
+	// A subtração e o limite inferior ficam na mesma instrução SQL. Assim,
+	// duas retiradas concorrentes não leem o mesmo estoque e sobrescrevem uma
+	// à outra, perdendo uma das movimentações.
+	resultado, err := database.DB.Exec(
+		`UPDATE itens
+		 SET quantidade = CASE
+			WHEN quantidade - ? < 0 THEN 0
+			ELSE quantidade - ?
+		 END
+		 WHERE id = ? AND usuario_id = ?`,
+		ret.Quantidade, ret.Quantidade, id, usuarioID,
 	)
-	if err := row.Scan(&quantidadeAtual); err != nil {
+	if err != nil {
+		http.Error(w, "erro ao atualizar item", http.StatusInternalServerError)
+		return
+	}
+
+	linhasAfetadas, _ := resultado.RowsAffected()
+	if linhasAfetadas == 0 {
 		http.Error(w, "item não encontrado", http.StatusNotFound)
 		return
 	}
 
-	novaQuantidade := quantidadeAtual - ret.Quantidade
-	if novaQuantidade < 0 {
-		novaQuantidade = 0
-	}
-
-	_, err := database.DB.Exec(
-		"UPDATE itens SET quantidade = ? WHERE id = ? AND usuario_id = ?",
-		novaQuantidade, id, usuarioID,
-	)
-	if err != nil {
-		http.Error(w, "erro ao atualizar item", http.StatusInternalServerError)
+	var novaQuantidade float64
+	if err := database.DB.QueryRow(
+		"SELECT quantidade FROM itens WHERE id = ? AND usuario_id = ?", id, usuarioID,
+	).Scan(&novaQuantidade); err != nil {
+		http.Error(w, "erro ao ler item atualizado", http.StatusInternalServerError)
 		return
 	}
 
