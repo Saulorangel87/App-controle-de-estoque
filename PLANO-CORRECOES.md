@@ -274,15 +274,17 @@ status, os arquivos afetados e as validações executadas.
 
 ### P12. Reforçar pipeline e reprodutibilidade
 
-- **Status:** Em andamento — action SSH atualizada e fixada por SHA; validação
-  do deploy ainda pendente.
+- **Status:** Em andamento — deploy migrado para SSH nativo com validação
+  explícita de host; validação no GitHub ainda pendente.
 - **Arquivos previstos:** `.github/workflows/deploy.yml`, Dockerfiles.
 - **Ações:**
   - [ ] adicionar testes automatizados e verificações de segurança;
   - [x] usar `npm ci` no Dockerfile e no CI;
   - [ ] fixar actions por SHA após revisão das versões;
-  - [x] atualizar/revalidar `appleboy/ssh-action`, anteriormente em `v1.0.3`,
-    para `v1.2.5` fixada por SHA;
+  - [x] avaliar `appleboy/ssh-action` e identificar incompatibilidade persistente
+    de fingerprint;
+  - [x] substituir a action por SSH nativo com `ssh-keyscan`, comparação de
+    fingerprint e `StrictHostKeyChecking=yes`;
   - [x] tornar pull previsível com `git pull --ff-only origin main`;
   - [x] impedir deploys concorrentes com `concurrency`;
   - [x] adicionar smoke tests HTTP para backend e frontend;
@@ -401,6 +403,7 @@ status, os arquivos afetados e as validações executadas.
 | 17/09/2026 | P12 | Action SSH atualizada para v1.2.5 e fixada no commit `0ff4204d59e8e51228ff73bce53f80d53301dee2` | Release oficial v1.2.5; `git diff --check` passou |
 | 17/09/2026 | P12 | Execução automática após o commit revelou erro de indentação YAML na linha 63; deploy não chegou a iniciar | GitHub Actions #11; workflow inválido |
 | 17/09/2026 | P12 | Execução #12: YAML e build passaram, mas a action v1.2.5 ainda recusou o fingerprint; `script_stop` também foi identificado como input não suportado | GitHub Actions #12; `host key fingerprint mismatch` e aviso de `script_stop` inesperado |
+| 17/09/2026 | P12 | Deploy migrado para SSH nativo; fingerprint ED25519 é comparado antes da autenticação e o `known_hosts` temporário é usado com verificação estrita | `.github/workflows/deploy.yml`; validação do CI pendente |
 
 ## Registro de decisões e riscos aceitos
 
