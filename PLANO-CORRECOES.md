@@ -324,11 +324,11 @@ status, os arquivos afetados e as validações executadas.
   - [x] exigir início manual do workflow e ambiente `production` antes do deploy;
 - **Critérios de aceite:** CI detecta regressões; build usa lockfile; deploy falho
   não é apresentado como concluído.
-- **Evidência parcial:** além das proteções já registradas, o workflow agora
-  executa testes Go, auditoria de dependências e lint antes do deploy. A versão
-  vulnerável do React Router foi atualizada para `7.18.2`; `npm audit
-  --omit=dev` retornou zero vulnerabilidades. O próximo workflow deve confirmar
-  a nova sequência integral.
+- **Evidência:** além das proteções já registradas, o workflow executa testes
+  Go, auditoria de dependências e lint antes do deploy. A versão vulnerável do
+  React Router foi atualizada para `7.18.2`; `npm audit --omit=dev` retornou
+  zero vulnerabilidades. O deploy manual após o commit `5417f6c` foi concluído
+  sem erros, confirmando a sequência integral do workflow.
 
 #### P12-A. Acesso privado da VPS via Tailscale
 
@@ -505,7 +505,7 @@ status, os arquivos afetados e as validações executadas.
 | 17/09/2026 | P12/P13 | React Router atualizado para `7.18.2`; lint, auditoria de produção e testes Go adicionados ao workflow | `npm run lint`, `npm run build`, `npm audit --omit=dev`, `git diff --check` |
 | 17/09/2026 | P2/P12-A/P15 | Documento corrigido com pendências reais: canal verificado de recuperação, limpeza da credencial Tailscale legada e hardening de container/rede | Revisão do código, workflow e configuração versionada |
 | 17/09/2026 | P2/P5 | Política mínima ajustada de 12 para 8 caracteres em novas senhas e redefinições; credenciais antigas continuam funcionando no login | `go test ./... -count=3`, `go vet ./...`, `npm run lint`, `npm run build`, `npm audit --omit=dev --audit-level=high` |
-| 18/09/2026 | P5/P12 | Alteração da senha mínima publicada no `main` no commit `5417f6c`; como o workflow é manual (`workflow_dispatch`), ainda falta disparar a execução de produção | `git status` limpo; última execução confirmada: GitHub Actions #17, sucesso |
+| 18/09/2026 | P5/P12 | Alteração da senha mínima publicada no `main` no commit `5417f6c`; deploy manual executado pelo GitHub e concluído sem erros | Relato do usuário; workflow `workflow_dispatch` concluído com sucesso |
 
 ## Registro de decisões e riscos aceitos
 
