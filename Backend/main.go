@@ -31,7 +31,7 @@ func main() {
 	})
 
 	// Autenticação e recuperação de senha (não exigem token). Login e cadastro passam
-	// por LimitarTentativas: 5 tentativas com falha por IP a cada 5 min — login/cadastro
+	// por LimitarTentativas: 5 tentativas com falha por IP e conta a cada 5 min — login/cadastro
 	// certos nunca são bloqueados, só sequências de erro.
 	mux.HandleFunc("POST /cadastro", middleware.LimitarTentativas(handlers.Cadastrar))
 	mux.HandleFunc("POST /login", middleware.LimitarTentativas(handlers.Login))
@@ -73,7 +73,7 @@ func main() {
 	// uma API externa, que pode legitimamente levar alguns segundos.
 	servidor := &http.Server{
 		Addr:              ":8080",
-		Handler:           corsMiddleware(protegerCSRF(mux)),
+		Handler:           middleware.LimitarCorpoEstruturado(corsMiddleware(protegerCSRF(mux))),
 		ReadTimeout:       30 * time.Second,
 		ReadHeaderTimeout: 10 * time.Second,
 		WriteTimeout:      45 * time.Second,

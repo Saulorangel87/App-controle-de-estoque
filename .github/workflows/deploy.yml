@@ -34,6 +34,7 @@ jobs:
         working-directory: ./Backend # ajuste se a pasta tiver outro nome
         run: |
           go build ./...
+          go test ./...
           go vet ./...
 
       - name: Configurar Node.js
@@ -47,6 +48,8 @@ jobs:
         working-directory: ./Frontend # ajuste se a pasta tiver outro nome
         run: |
           npm ci
+          npm audit --omit=dev --audit-level=high
+          npm run lint
           npm run build
 
   # ---------- CD: só roda se a CI acima passar ----------

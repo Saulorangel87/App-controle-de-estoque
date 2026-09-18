@@ -26,6 +26,14 @@ func TestAutenticarRejeitaClaimsInvalidos(t *testing.T) {
 		{nome: "sem usuario", claims: jwt.MapClaims{"exp": time.Now().Add(time.Hour).Unix()}},
 		{nome: "usuario decimal", claims: jwt.MapClaims{"usuario_id": 1.5, "exp": time.Now().Add(time.Hour).Unix()}},
 		{nome: "expirado", claims: jwt.MapClaims{"usuario_id": 1, "exp": time.Now().Add(-time.Hour).Unix()}},
+		{nome: "emissor incorreto", claims: jwt.MapClaims{
+			"usuario_id": 1, "token_versao": 0, "iss": "outro-servico",
+			"aud": config.AudienciaJWT, "iat": time.Now().Unix(), "exp": time.Now().Add(time.Hour).Unix(),
+		}},
+		{nome: "audiencia incorreta", claims: jwt.MapClaims{
+			"usuario_id": 1, "token_versao": 0, "iss": config.EmissorJWT,
+			"aud": "outro-cliente", "iat": time.Now().Unix(), "exp": time.Now().Add(time.Hour).Unix(),
+		}},
 	}
 
 	for _, teste := range tests {
@@ -92,6 +100,9 @@ func TestAutenticarInvalidaTokenAposTrocaDeSenha(t *testing.T) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"usuario_id":   1,
 		"token_versao": 0,
+		"iss":          config.EmissorJWT,
+		"aud":          config.AudienciaJWT,
+		"iat":          time.Now().Unix(),
 		"exp":          time.Now().Add(time.Hour).Unix(),
 	})
 	texto, err := token.SignedString(config.ChaveSecreta())

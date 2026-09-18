@@ -8,6 +8,11 @@ import (
 
 const tamanhoMinimoChaveJWT = 32
 
+const (
+	EmissorJWT   = "controle-estoque-api"
+	AudienciaJWT = "controle-estoque-web"
+)
+
 // Validar verifica configurações obrigatórias antes de o servidor aceitar
 // requisições autenticadas. Um segredo vazio ou curto tornaria possível forjar
 // tokens com facilidade, então o backend deve falhar ao iniciar nesse caso.

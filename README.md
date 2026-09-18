@@ -141,7 +141,7 @@ repositório.
 ## Deploy
 
 Produção roda via Docker Compose no Oracle Cloud (Backend na porta 8090,
-Frontend com nginx na 8091), atrás de Cloudflare Tunnel, nos domínios
+Frontend com nginx na 8092), atrás de Cloudflare Tunnel, nos domínios
 `estoque.devsaulo.com.br` (frontend) e `estoque-api.devsaulo.com.br` (backend).
 Detalhes completos em `NOTAS-DEPLOY.md` na raiz do projeto.
 

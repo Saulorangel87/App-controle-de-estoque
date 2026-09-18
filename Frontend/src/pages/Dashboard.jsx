@@ -40,7 +40,7 @@ export default function Dashboard() {
     try {
       const dados = await listarItens(token);
       setItens(dados);
-    } catch (e) {
+    } catch {
       setErro("Não foi possível carregar os itens do estoque.");
     } finally {
       setCarregando(false);
@@ -48,6 +48,9 @@ export default function Dashboard() {
   }, [token]);
 
   useEffect(() => {
+    // A chamada inicia a sincronização com a API e atualiza o estado de
+    // carregamento; este setState é intencional neste efeito assíncrono.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     carregarItens();
   }, [carregarItens]);
 
@@ -108,7 +111,7 @@ export default function Dashboard() {
     try {
       await excluirItem(itemParaExcluir.id, token);
       await carregarItens();
-    } catch (e) {
+    } catch {
       setErro("Não foi possível excluir o item.");
     } finally {
       setItemParaExcluir(null);

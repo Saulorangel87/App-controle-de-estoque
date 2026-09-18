@@ -48,6 +48,10 @@ func Autenticar(proximo http.HandlerFunc) http.HandlerFunc {
 				return config.ChaveSecreta(), nil
 			},
 			jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}),
+			jwt.WithIssuer(config.EmissorJWT),
+			jwt.WithAudience(config.AudienciaJWT),
+			jwt.WithIssuedAt(),
+			jwt.WithExpirationRequired(),
 		)
 		if err != nil || !token.Valid {
 			http.Error(w, "token inválido ou expirado", http.StatusUnauthorized)

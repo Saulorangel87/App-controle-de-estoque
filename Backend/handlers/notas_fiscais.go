@@ -104,7 +104,7 @@ func ImportarNotaFiscalPorFoto(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	produtos, err := services.ExtrairProdutosDeImagem(conteudo)
+	produtos, err := services.ExtrairProdutosDeImagem(r.Context(), conteudo)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -157,7 +157,7 @@ func ImportarNotaFiscalPorFotoDePapel(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Printf("[foto-papel] imagem recebida: %d KB — chamando OCR.space...", len(conteudo)/1024)
 
-	produtos, err := services.ExtrairProdutosDeImagemViaOCRSpace(conteudo, config.ChaveOCRSpace())
+	produtos, err := services.ExtrairProdutosDeImagemViaOCRSpace(r.Context(), conteudo, config.ChaveOCRSpace())
 	log.Printf("[foto-papel] OCR.space respondeu em %v (erro: %v, itens: %d)", time.Since(inicio), err, len(produtos))
 	if err != nil {
 		status := http.StatusBadGateway
@@ -188,7 +188,7 @@ func ImportarNotaFiscalPorQRCode(w http.ResponseWriter, r *http.Request) {
 	var corpo struct {
 		URL string `json:"url"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&corpo); err != nil || strings.TrimSpace(corpo.URL) == "" {
+	if err := decodificarJSON(r, &corpo); err != nil || strings.TrimSpace(corpo.URL) == "" {
 		http.Error(w, "envie a URL lida no QR Code da nota", http.StatusBadRequest)
 		return
 	}
@@ -255,7 +255,7 @@ func ConfirmarImportacao(w http.ResponseWriter, r *http.Request) {
 		Chave    string                     `json:"chave"`
 		Entradas []models.EntradaConfirmada `json:"entradas"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&corpo); err != nil {
+	if err := decodificarJSON(r, &corpo); err != nil {
 		http.Error(w, "dados inválidos", http.StatusBadRequest)
 		return
 	}

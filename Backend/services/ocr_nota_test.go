@@ -27,3 +27,12 @@ func TestValidarImagemAceitaJPEGDentroDoLimite(t *testing.T) {
 		t.Fatalf("imagem JPEG válida foi rejeitada: %v", err)
 	}
 }
+
+func TestFatorSeguroAmpliacaoReduzImagensGrandes(t *testing.T) {
+	if fator := fatorSeguroAmpliacao(4000, 3000); fator != 1 {
+		t.Fatalf("fator para imagem de 12 MP = %d; esperado 1", fator)
+	}
+	if fator := fatorSeguroAmpliacao(2000, 2000); fator != 3 {
+		t.Fatalf("fator para imagem de 4 MP = %d; esperado 3", fator)
+	}
+}

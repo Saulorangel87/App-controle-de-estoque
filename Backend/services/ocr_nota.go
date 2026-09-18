@@ -2,6 +2,7 @@ package services
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"image"
@@ -55,8 +56,11 @@ var psmsFotoPapel = []string{"4", "11"}
 // digital nítido) do que com foto do cupom de papel térmico (mais difícil
 // pra qualquer OCR, por causa do desbotamento/reflexo/amassado do papel) —
 // por isso a segunda camada abaixo existe especificamente pra foto física.
-func ExtrairProdutosDeImagem(imagem []byte) ([]models.ProdXML, error) {
-	if err := adquirirLimiteOCR(); err != nil {
+func ExtrairProdutosDeImagem(ctx context.Context, imagem []byte) ([]models.ProdXML, error) {
+	ctx, cancelar := context.WithTimeout(ctx, tempoMaximoProcessamentoOCR)
+	defer cancelar()
+
+	if err := adquirirLimiteOCR(ctx); err != nil {
 		return nil, err
 	}
 	defer liberarLimiteOCR()
@@ -66,7 +70,7 @@ func ExtrairProdutosDeImagem(imagem []byte) ([]models.ProdXML, error) {
 		// Formato de imagem não suportado ou arquivo corrompido — não tem
 		// como rotacionar/pré-processar nesse caso, tenta OCR direto nos
 		// bytes originais como última tentativa.
-		texto, errOCR := rodarOCR(imagem, psmPrints)
+		texto, errOCR := rodarOCR(ctx, imagem, psmPrints)
 		if errOCR != nil {
 			return nil, errOCR
 		}
@@ -75,14 +79,14 @@ func ExtrairProdutosDeImagem(imagem []byte) ([]models.ProdXML, error) {
 
 	// Camada 1: PSM 6 nas 4 rotações — rápido (4 chamadas ao Tesseract),
 	// cobre a maioria dos casos (prints/screenshots digitais).
-	texto, produtos, rodou, ultimoErro := tentarComPSMs(imagemDecodificada, []string{psmPrints})
+	texto, produtos, rodou, ultimoErro := tentarComPSMs(ctx, imagemDecodificada, []string{psmPrints})
 
 	// Camada 2: só entra em ação se a primeira não achou NENHUM item — foto
 	// de papel físico tende a precisar de um PSM diferente. Mais lento (mais
 	// 8 chamadas ao Tesseract: 4 rotações × 2 PSMs), então só roda quando
 	// realmente precisa.
 	if len(produtos) == 0 {
-		texto2, produtos2, rodou2, ultimoErro2 := tentarComPSMs(imagemDecodificada, psmsFotoPapel)
+		texto2, produtos2, rodou2, ultimoErro2 := tentarComPSMs(ctx, imagemDecodificada, psmsFotoPapel)
 		if len(produtos2) > len(produtos) {
 			texto, produtos = texto2, produtos2
 		} else if texto == "" && texto2 != "" {
@@ -113,7 +117,7 @@ func ExtrairProdutosDeImagem(imagem []byte) ([]models.ProdXML, error) {
 // encontrado. rodouAlgumaVez indica se pelo menos uma combinação chegou a
 // rodar o Tesseract com sucesso (mesmo sem achar itens) — usado por quem
 // chama pra decidir se o erro é "não rodou o OCR" ou "rodou mas não achou".
-func tentarComPSMs(imagemDecodificada image.Image, psms []string) (
+func tentarComPSMs(ctx context.Context, imagemDecodificada image.Image, psms []string) (
 	melhorTexto string, melhoresProdutos []models.ProdXML, rodouAlgumaVez bool, ultimoErro error,
 ) {
 	for rotacoes := 0; rotacoes < 4; rotacoes++ {
@@ -126,7 +130,7 @@ func tentarComPSMs(imagemDecodificada image.Image, psms []string) (
 		}
 
 		for _, psm := range psms {
-			texto, err := rodarOCR(imagemProcessada, psm)
+			texto, err := rodarOCR(ctx, imagemProcessada, psm)
 			if err != nil {
 				ultimoErro = err
 				continue
@@ -180,7 +184,7 @@ func salvarDebugOCR(texto string) {
 // binário via exec.Command, e não uma lib com bindings C (tipo gosseract)
 // — assim o Dockerfile só precisa instalar o pacote tesseract-ocr, sem
 // complicar a build do Go com CGO.
-func rodarOCR(imagemProcessada []byte, psm string) (string, error) {
+func rodarOCR(ctx context.Context, imagemProcessada []byte, psm string) (string, error) {
 	arquivoTemp, err := os.CreateTemp("", "nota-ocr-*.png")
 	if err != nil {
 		return "", ErrOCRFalhou
@@ -203,12 +207,12 @@ func rodarOCR(imagemProcessada []byte, psm string) (string, error) {
 	// suposição errada.
 	// "stdout": manda o texto reconhecido direto pra saída padrão, sem
 	// precisar gerenciar mais um arquivo temporário de resultado.
-	saida, err := exec.Command(
+	saida, err := exec.CommandContext(ctx,
 		"tesseract", arquivoTemp.Name(), "stdout",
 		"-l", "por", "--psm", psm, "--dpi", "300",
 	).Output()
 	if err != nil {
-		return "", fmt.Errorf("%w: %v", ErrOCRFalhou, err)
+		return "", ErrOCRFalhou
 	}
 
 	return string(saida), nil
@@ -250,8 +254,10 @@ func rotacionarUmaVez(img image.Image) image.Image {
 const fatorAmpliacao = 3
 
 const (
-	maximoLadoImagemOCR   = 6000
-	maximoPixelsImagemOCR = 12_000_000
+	maximoLadoImagemOCR         = 6000
+	maximoPixelsImagemOCR       = 12_000_000
+	maximoPixelsProcessadosOCR  = 36_000_000
+	tempoMaximoProcessamentoOCR = 40 * time.Second
 )
 
 var limiteOCR = make(chan struct{}, 2)
@@ -273,12 +279,14 @@ func ValidarImagem(imagem []byte) error {
 	return nil
 }
 
-func adquirirLimiteOCR() error {
+func adquirirLimiteOCR(ctx context.Context) error {
 	select {
 	case limiteOCR <- struct{}{}:
 		return nil
 	case <-time.After(5 * time.Second):
 		return errors.New("leitura de imagem ocupada no momento; tente novamente em instantes")
+	case <-ctx.Done():
+		return ErrOCRFalhou
 	}
 }
 
@@ -300,9 +308,12 @@ func prepararImagemParaOCR(imagemDecodificada image.Image) ([]byte, error) {
 	limites := imagemDecodificada.Bounds()
 	larguraOriginal := limites.Dx()
 	alturaOriginal := limites.Dy()
+	fator := fatorSeguroAmpliacao(larguraOriginal, alturaOriginal)
+	larguraProcessada := larguraOriginal * fator
+	alturaProcessada := alturaOriginal * fator
 
 	imagemAmpliada := image.NewGray(image.Rect(
-		0, 0, larguraOriginal*fatorAmpliacao, alturaOriginal*fatorAmpliacao,
+		0, 0, larguraProcessada, alturaProcessada,
 	))
 
 	// Amostragem "vizinho mais próximo": cada pixel da imagem ampliada
@@ -310,10 +321,10 @@ func prepararImagemParaOCR(imagemDecodificada image.Image) ([]byte, error) {
 	// já que o objetivo é só dar mais espaço em pixels pros traços dos
 	// caracteres, não suavizar a imagem (suavizar poderia até atrapalhar,
 	// borrando bordas que o OCR usa pra distinguir letras/números).
-	for y := 0; y < alturaOriginal*fatorAmpliacao; y++ {
-		yOriginal := limites.Min.Y + y/fatorAmpliacao
-		for x := 0; x < larguraOriginal*fatorAmpliacao; x++ {
-			xOriginal := limites.Min.X + x/fatorAmpliacao
+	for y := 0; y < alturaProcessada; y++ {
+		yOriginal := limites.Min.Y + y/fator
+		for x := 0; x < larguraProcessada; x++ {
+			xOriginal := limites.Min.X + x/fator
 			corOriginal := imagemDecodificada.At(xOriginal, yOriginal)
 			cinza := color.GrayModel.Convert(corOriginal).(color.Gray)
 			imagemAmpliada.SetGray(x, y, cinza)
@@ -328,6 +339,24 @@ func prepararImagemParaOCR(imagemDecodificada image.Image) ([]byte, error) {
 	}
 
 	return buffer.Bytes(), nil
+}
+
+// fatorSeguroAmpliacao preserva o ganho do aumento em imagens pequenas, mas
+// evita transformar uma imagem de 12 MP em uma matriz de 108 MP. O fator é
+// reduzido em passos inteiros para manter a amostragem simples e limitar a
+// memória usada pela imagem em escala de cinza e pelo Otsu.
+func fatorSeguroAmpliacao(largura, altura int) int {
+	if largura <= 0 || altura <= 0 {
+		return 1
+	}
+
+	pixels := int64(largura) * int64(altura)
+	for fator := fatorAmpliacao; fator > 1; fator-- {
+		if pixels*int64(fator)*int64(fator) <= maximoPixelsProcessadosOCR {
+			return fator
+		}
+	}
+	return 1
 }
 
 // binarizarOtsu converte uma imagem em escala de cinza pra preto e branco

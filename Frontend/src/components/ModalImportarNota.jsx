@@ -193,7 +193,7 @@ export default function ModalImportarNota({ token, itensEstoque, aoFechar, aoCon
       const resultado = await confirmarImportacaoNota(chaveConfirmacao, entradas, token);
       setResumo(resultado);
       setPasso(PASSOS.SUCESSO);
-    } catch (e) {
+    } catch {
       setErro("Não foi possível aplicar a importação. Tente novamente.");
     } finally {
       setCarregando(false);

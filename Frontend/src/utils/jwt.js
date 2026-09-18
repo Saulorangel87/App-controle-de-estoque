@@ -13,7 +13,7 @@ export function decodificarToken(token) {
         .join("")
     );
     return JSON.parse(jsonPayload);
-  } catch (erro) {
+  } catch {
     return null;
   }
 }

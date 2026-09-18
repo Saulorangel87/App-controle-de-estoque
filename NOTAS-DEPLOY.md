@@ -95,7 +95,7 @@ App controle de estoque/
   SEO 100, Navegação agêntica 3/3 — todos os critérios no verde
 
 ## Deploy — concluído
-- Domínios: `estoque.devsaulo.com.br` (frontend, porta 8091) e
+- Domínios: `estoque.devsaulo.com.br` (frontend, porta 8092) e
   `estoque-api.devsaulo.com.br` (backend, porta 8090)
 - CORS, caminho do banco (`DB_PATH`) e URL da API (`VITE_API_URL`) configuráveis
   via variável de ambiente/build arg

@@ -43,7 +43,7 @@ func AdicionarItem(w http.ResponseWriter, r *http.Request) {
 	usuarioID := r.Context().Value(middleware.UsuarioIDContexto).(int)
 
 	var it models.Item
-	if err := json.NewDecoder(r.Body).Decode(&it); err != nil {
+	if err := decodificarJSON(r, &it); err != nil {
 		http.Error(w, "dados inválidos", http.StatusBadRequest)
 		return
 	}
@@ -78,7 +78,7 @@ func EditarItem(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 
 	var it models.Item
-	if err := json.NewDecoder(r.Body).Decode(&it); err != nil {
+	if err := decodificarJSON(r, &it); err != nil {
 		http.Error(w, "dados inválidos", http.StatusBadRequest)
 		return
 	}
@@ -142,7 +142,7 @@ func RetirarItem(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 
 	var ret retirada
-	if err := json.NewDecoder(r.Body).Decode(&ret); err != nil {
+	if err := decodificarJSON(r, &ret); err != nil {
 		http.Error(w, "dados inválidos", http.StatusBadRequest)
 		return
 	}

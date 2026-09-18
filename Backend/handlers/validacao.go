@@ -1,13 +1,36 @@
 package handlers
 
 import (
+	"encoding/json"
 	"errors"
+	"io"
 	"math"
+	"net/http"
 	"strings"
 	"unicode/utf8"
 
 	"controle-estoque/models"
 )
+
+// decodificarJSON aceita exatamente um valor JSON e rejeita conteúdo extra.
+// Com o middleware LimitarCorpoEstruturado, a segunda leitura também detecta
+// corpos que começam com um objeto válido e continuam além do limite.
+func decodificarJSON(r *http.Request, destino any) error {
+	decodificador := json.NewDecoder(r.Body)
+	if err := decodificador.Decode(destino); err != nil {
+		return err
+	}
+
+	var extra any
+	err := decodificador.Decode(&extra)
+	if err == io.EOF {
+		return nil
+	}
+	if err == nil {
+		return errors.New("corpo JSON contém mais de um valor")
+	}
+	return err
+}
 
 const (
 	tamanhoMaximoNome    = 200

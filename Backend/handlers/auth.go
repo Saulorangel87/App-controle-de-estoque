@@ -32,16 +32,29 @@ type cadastroEntrada struct {
 }
 
 const (
-	tamanhoMinimoSenha      = 6
-	tamanhoMaximoSenhaBytes = 72 // limite efetivo aceito pelo bcrypt
+	tamanhoMinimoSenha       = 12
+	tamanhoMaximoSenhaBytes  = 72 // limite efetivo aceito pelo bcrypt
+	tamanhoMaximoNomeUsuario = 100
+	tamanhoMaximoPergunta    = 200
+	tamanhoMaximoResposta    = 200
 )
 
 func validarSenha(senha string) error {
 	if utf8.RuneCountInString(senha) < tamanhoMinimoSenha {
-		return errors.New("a senha deve ter pelo menos 6 caracteres")
+		return errors.New("a senha deve ter pelo menos 12 caracteres")
 	}
 	if len([]byte(senha)) > tamanhoMaximoSenhaBytes {
 		return errors.New("a senha excede o limite permitido")
+	}
+	return nil
+}
+
+func validarCampoAutenticacao(valor, campo string, tamanhoMaximo int) error {
+	if strings.TrimSpace(valor) == "" {
+		return errors.New(campo + " é obrigatório")
+	}
+	if utf8.RuneCountInString(valor) > tamanhoMaximo {
+		return errors.New(campo + " excede o limite permitido")
 	}
 	return nil
 }
@@ -54,14 +67,27 @@ func normalizarResposta(resposta string) string {
 
 func Cadastrar(w http.ResponseWriter, r *http.Request) {
 	var c cadastroEntrada
-	if err := json.NewDecoder(r.Body).Decode(&c); err != nil {
+	if err := decodificarJSON(r, &c); err != nil {
 		http.Error(w, "dados inválidos", http.StatusBadRequest)
 		return
 	}
 
-	if c.Nome == "" || c.Senha == "" || c.PerguntaSeguranca == "" || c.RespostaSeguranca == "" {
-		http.Error(w, "nome, senha, pergunta e resposta de segurança são obrigatórios", http.StatusBadRequest)
-		return
+	c.Nome = strings.TrimSpace(c.Nome)
+	c.PerguntaSeguranca = strings.TrimSpace(c.PerguntaSeguranca)
+	c.RespostaSeguranca = strings.TrimSpace(c.RespostaSeguranca)
+	for _, campo := range []struct {
+		valor  string
+		nome   string
+		limite int
+	}{
+		{valor: c.Nome, nome: "nome", limite: tamanhoMaximoNomeUsuario},
+		{valor: c.PerguntaSeguranca, nome: "pergunta de segurança", limite: tamanhoMaximoPergunta},
+		{valor: c.RespostaSeguranca, nome: "resposta de segurança", limite: tamanhoMaximoResposta},
+	} {
+		if err := validarCampoAutenticacao(campo.valor, campo.nome, campo.limite); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 	}
 	if err := validarSenha(c.Senha); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -98,8 +124,13 @@ func Cadastrar(w http.ResponseWriter, r *http.Request) {
 
 func Login(w http.ResponseWriter, r *http.Request) {
 	var c credenciais
-	if err := json.NewDecoder(r.Body).Decode(&c); err != nil {
+	if err := decodificarJSON(r, &c); err != nil {
 		http.Error(w, "dados inválidos", http.StatusBadRequest)
+		return
+	}
+	c.Nome = strings.TrimSpace(c.Nome)
+	if c.Nome == "" {
+		http.Error(w, "usuário ou senha inválidos", http.StatusUnauthorized)
 		return
 	}
 
@@ -121,6 +152,9 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		"usuario_id":   usuario.ID,
 		"nome":         usuario.Nome,
 		"token_versao": usuario.TokenVersao,
+		"iss":          config.EmissorJWT,
+		"aud":          config.AudienciaJWT,
+		"iat":          time.Now().Unix(),
 		"exp":          time.Now().Add(72 * time.Hour).Unix(),
 	})
 
@@ -183,6 +217,11 @@ func ObterPerguntaSeguranca(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "informe o nome de usuário", http.StatusBadRequest)
 		return
 	}
+	nome = strings.TrimSpace(nome)
+	if err := validarCampoAutenticacao(nome, "nome", tamanhoMaximoNomeUsuario); err != nil {
+		http.Error(w, "não foi possível encontrar esse usuário", http.StatusNotFound)
+		return
+	}
 
 	var pergunta string
 	row := database.DB.QueryRow(
@@ -207,13 +246,19 @@ type redefinicaoEntrada struct {
 // RedefinirSenha confere a resposta de segurança e, se bater, troca a senha do usuário.
 func RedefinirSenha(w http.ResponseWriter, r *http.Request) {
 	var e redefinicaoEntrada
-	if err := json.NewDecoder(r.Body).Decode(&e); err != nil {
+	if err := decodificarJSON(r, &e); err != nil {
 		http.Error(w, "dados inválidos", http.StatusBadRequest)
 		return
 	}
 
-	if e.Nome == "" || e.Resposta == "" || e.NovaSenha == "" {
-		http.Error(w, "nome, resposta e nova senha são obrigatórios", http.StatusBadRequest)
+	e.Nome = strings.TrimSpace(e.Nome)
+	e.Resposta = strings.TrimSpace(e.Resposta)
+	if err := validarCampoAutenticacao(e.Nome, "nome", tamanhoMaximoNomeUsuario); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if err := validarCampoAutenticacao(e.Resposta, "resposta de segurança", tamanhoMaximoResposta); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	if err := validarSenha(e.NovaSenha); err != nil {
@@ -227,7 +272,9 @@ func RedefinirSenha(w http.ResponseWriter, r *http.Request) {
 		"SELECT id, resposta_seguranca_hash FROM usuarios WHERE nome = ?", e.Nome,
 	)
 	if err := row.Scan(&usuarioID, &hashResposta); err != nil {
-		http.Error(w, "não foi possível redefinir a senha", http.StatusNotFound)
+		// O mesmo status/mensagem da resposta incorreta evita uma enumeração
+		// trivial pelo endpoint de redefinição.
+		http.Error(w, "resposta de segurança incorreta", http.StatusUnauthorized)
 		return
 	}
 

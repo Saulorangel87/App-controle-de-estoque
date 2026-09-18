@@ -23,7 +23,7 @@ export default function ModalRetirar({ item, aoFechar, aoConfirmar }) {
     try {
       await aoConfirmar(valor);
       aoFechar();
-    } catch (e) {
+    } catch {
       setErro("Não foi possível registrar a retirada.");
     } finally {
       setEnviando(false);

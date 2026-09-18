@@ -24,12 +24,13 @@ status, os arquivos afetados e as validações executadas.
 
 ### P0. Inventário e baseline técnico
 
-- **Status:** Concluído na análise inicial; testes automatizados ainda pendentes.
+- **Status:** Concluído — baseline revalidado após as correções.
 - **Escopo:** confirmar estrutura, documentação, estado do Git, build e testes.
 - **Critérios de aceite:** manter `git diff --check` limpo; registrar falhas de
   ambiente separadamente de falhas do código; não incluir artefatos gerados.
-- **Observação:** não foram encontrados testes automatizados. `go test ./...`
-  e `npm run build` ficaram bloqueados pelo acesso do sandbox aos caches/configuração.
+- **Observação:** os testes Go foram executados com `GOCACHE` temporário; o build
+  frontend foi validado fora da restrição local do esbuild e também no CI. Falhas
+  de sandbox foram separadas de falhas do código.
 
 ## Fase 1 — Segurança crítica e autenticação
 
@@ -44,60 +45,68 @@ status, os arquivos afetados e as validações executadas.
   - [x] validar `usuario_id` com tipo numérico inteiro e positivo;
   - [x] usar o parser de claims do JWT, que valida a expiração;
   - [x] evitar assertions que poderiam causar panic;
-  - [ ] avaliar `iss`, `aud`, `iat` e estratégia de invalidação após troca de senha.
+  - [x] incluir e validar `iss`, `aud` e `iat` nos tokens emitidos;
+  - [x] invalidar sessões após troca de senha por `token_versao`.
 - **Critérios de aceite:** token sem assinatura válida, algoritmo diferente,
   segredo ausente, claim ausente ou claim com tipo inválido retorna 401 sem panic.
-- **Evidência:** `go test ./...` e `go vet ./...` executados em 17/09/2026;
-  ambos passaram. Não há testes automatizados no repositório ainda, portanto os
-  casos específicos de JWT permanecem cobertos manualmente/por implementação e
-  devem ser incluídos na Fase 4 (P13).
+- **Evidência:** `go test ./...` e `go vet ./...` passaram em 17/09/2026,
+  incluindo parser restrito a HS256, expiração obrigatória, emissor, audiência,
+  `iat`, claims inválidos e invalidação por versão de sessão.
 
 ### P2. Corrigir recuperação de senha
 
-- **Status:** Em andamento — invalidação de sessões implementada; modelo de
-  recuperação ainda pode evoluir para código/e-mail.
+- **Status:** Em andamento — invalidação e redução parcial de enumeração
+  implementadas; a recuperação segura ainda depende de canal verificado.
 - **Arquivos previstos:** `Backend/main.go`, `Backend/handlers/auth.go`,
   `Backend/middleware/ratelimit.go`, frontend de login.
 - **Ações:**
   - [x] aplicar rate limit também à consulta da pergunta;
-  - [ ] reduzir enumeração de usuários com resposta e comportamento uniformes;
+  - [x] uniformizar status e mensagem no endpoint de redefinição para usuário
+    inexistente e resposta incorreta;
+  - [ ] eliminar a exposição da pergunta e demais diferenças observáveis no
+    fluxo completo;
   - [x] validar tamanho da nova senha no backend, respeitando o limite do bcrypt;
   - [ ] avaliar substituição da pergunta de segurança por código temporário/e-mail;
   - [x] invalidar sessões/tokens existentes após redefinição por `token_versao`;
 - **Critérios de aceite:** não é possível enumerar usuários por respostas distintas;
   tentativas repetidas são limitadas; senha inválida é rejeitada pela API.
-- **Evidência parcial:** a consulta da pergunta passou a usar o rate limit por IP;
-  cadastro/redefinição rejeitam senhas com menos de 6 caracteres ou acima de 72
-  bytes; a tabela `usuarios` ganhou migração de `token_versao`, incluída no JWT
-  e conferida em cada requisição autenticada. Tokens anteriores à migração serão
-  rejeitados e exigirão novo login. `go test ./...`, `go vet ./...` e
-  `git diff --check` passaram em 17/09/2026. Ainda falta evoluir o mecanismo de
-  recuperação para reduzir a dependência da pergunta de segurança.
+- **Evidência parcial:** a consulta da pergunta continua limitada por IP e a
+  redefinição já não diferencia usuário inexistente de resposta incorreta. O
+  cadastro/redefinição exigem senha de no mínimo 12 caracteres e até 72 bytes;
+  login continua aceitando credenciais antigas. A tabela `usuarios` ganhou
+  `token_versao`, incluída no JWT e conferida em cada requisição autenticada.
+  Ainda falta substituir a pergunta por código temporário entregue por canal
+  verificado; sem e-mail, SMS ou outro canal configurado não é seguro marcar
+  essa vulnerabilidade como encerrada.
 
 ### P3. Tornar o rate limit confiável
 
-- **Status:** Concluído — requer configuração do proxy no ambiente de produção.
+- **Status:** Em andamento — proteção por IP e conta concluída; falta decidir
+  armazenamento compartilhado e configurar o proxy em produção.
 - **Arquivos previstos:** `Backend/middleware/ratelimit.go`, configuração de
   proxy/deploy se necessário.
 - **Ações:**
   - [x] aceitar `CF-Connecting-IP` e `X-Forwarded-For` somente quando a
     conexão vier de uma rede em `TRUSTED_PROXY_CIDRS`;
   - [x] validar o formato do IP e usar o peer da conexão como fallback seguro;
-  - [ ] considerar chave composta por IP + identificador normalizado da conta;
+  - [x] usar chave composta por IP + identificador normalizado da conta;
   - [x] limpar registros expirados quando o mapa atingir grande volume;
-  - [ ] avaliar armazenamento compartilhado em produção, caso existam múltiplas instâncias.
+  - [ ] avaliar armazenamento compartilhado em produção, caso existam múltiplas instâncias;
+  - [ ] configurar `TRUSTED_PROXY_CIDRS` com as redes reais do proxy/túnel;
 - **Critérios de aceite:** cabeçalhos arbitrários enviados diretamente ao backend
   não permitem contornar o limite; o comportamento atrás do Cloudflare continua correto.
 - **Evidência:** `obterIP` agora só usa cabeçalhos quando o peer pertence às
-  redes CIDR configuradas; IPs inválidos são ignorados e o mapa possui limpeza
-  de registros expirados. `go test ./...`, `go vet ./...` e `git diff --check`
-  passaram em 17/09/2026. Antes do próximo deploy, configurar
+  redes CIDR configuradas; as tentativas também são indexadas pela conta
+  normalizada, IPs inválidos são ignorados e o mapa possui limpeza de registros
+  expirados. `go test ./...`, `go vet ./...` e `git diff --check` passaram em
+  17/09/2026. Antes do próximo deploy, configurar
   `TRUSTED_PROXY_CIDRS` com a rede real do proxy/túnel; sem essa variável o
   sistema fica seguro contra falsificação, mas pode agrupar usuários pelo peer.
 
 ### P4. Proteger tokens no frontend
 
-- **Status:** Em andamento — migração implementada; validação funcional no container pendente.
+- **Status:** Em andamento — migração implementada; validação funcional no
+  container/produção permanece pendente.
 - **Arquivos previstos:** `Frontend/src/context/AuthContext.jsx`,
   `Frontend/src/api/api.js`, backend e nginx.
 - **Ações:**
@@ -121,7 +130,8 @@ status, os arquivos afetados e as validações executadas.
 
 ### P5. Validar dados no backend
 
-- **Status:** Concluído.
+- **Status:** Concluído — validação server-side, limites de autenticação e corpo
+  estruturado verificados nesta etapa.
 - **Arquivos previstos:** `Backend/handlers/itens.go`,
   `Backend/handlers/notas_fiscais.go`, modelos e frontend.
 - **Ações:**
@@ -130,13 +140,18 @@ status, os arquivos afetados e as validações executadas.
   - [x] exigir nome, unidade e local com tamanho máximo;
   - [x] validar locais permitidos no backend;
   - [x] aplicar as regras também às entradas confirmadas de importação;
-  - [ ] validar tamanho e formato dos campos de autenticação;
-  - [ ] repetir as regras no frontend apenas para melhor experiência, nunca como única defesa.
+  - [x] validar tamanho dos campos de autenticação e exigir 12 caracteres em
+    novas senhas/redefinições;
+  - [x] limitar corpos estruturados a 1 MiB no middleware global;
+  - [x] repetir o mínimo de senha no frontend apenas para melhor experiência,
+    mantendo o backend como defesa principal.
 - **Critérios de aceite:** chamadas diretas à API não conseguem criar estoque
   negativo, desabilitar alertas com mínimo negativo ou gravar valores inválidos.
 - **Evidência:** adicionada validação centralizada em
   `Backend/handlers/validacao.go`, aplicada aos endpoints de itens, retirada e
-  confirmação de nota. `go test ./...` e `go vet ./...` passaram em 17/09/2026.
+  confirmação de nota. Os campos de autenticação têm limites próprios e os
+  corpos estruturados são limitados pelo middleware global. `go test ./...` e
+  `go vet ./...` passaram em 17/09/2026.
 
 ### P6. Tornar retirada atômica
 
@@ -155,7 +170,7 @@ status, os arquivos afetados e as validações executadas.
 
 ### P7. Tornar confirmação de nota transacional e idempotente
 
-- **Status:** Concluído — validação do build frontend pendente por bloqueio do ambiente.
+- **Status:** Concluído — transação, idempotência e build frontend validados.
 - **Arquivos previstos:** `Backend/handlers/notas_fiscais.go`, banco/modelos e frontend.
 - **Ações:**
   - [x] validar toda a lista recebida, com limite de 500 itens;
@@ -168,15 +183,16 @@ status, os arquivos afetados e as validações executadas.
   reenvio da mesma confirmação não duplica entrada.
 - **Evidência:** criada a tabela `confirmacoes_importacao`, a API passou a
   receber `{ chave, entradas }` e o modal gera uma chave por prévia. `go test
-  ./...` e `go vet ./...` passaram em 17/09/2026. `npm run build` foi tentado,
-  mas o ambiente bloqueou o Vite/esbuild ao acessar diretório fora do workspace;
-  repetir no ambiente local/CI.
+  ./...`, `go vet ./...` e `npm run build` passaram; o build foi repetido fora da
+  restrição local do esbuild e já havia sido confirmado no CI.
 
 ## Fase 3 — Uploads, OCR e integrações externas
 
 ### P8. Limitar efetivamente uploads e processamento
 
-- **Status:** Concluído — validação funcional com imagens reais permanece recomendada.
+- **Status:** Em andamento — limites de concorrência, corpo e dimensão concluídos;
+  timeout e teto de processamento adicionados nesta etapa; imagens reais ainda
+  precisam de validação funcional.
 - **Arquivos previstos:** `Backend/main.go`,
   `Backend/handlers/notas_fiscais.go`, `Backend/services/ocr_nota.go` e
   `Backend/services/ocr_cloud.go`.
@@ -187,16 +203,22 @@ status, os arquivos afetados e as validações executadas.
   - [x] limitar a duas leituras OCR simultâneas, rejeitando espera acima de 5 segundos;
   - [x] limitar a resposta do OCR.space a 2 MB;
   - [x] manter timeouts e mensagens sem expor detalhes internos.
+  - [x] cancelar o Tesseract quando a requisição termina ou excede 40 segundos;
+  - [x] reduzir a ampliação de imagens grandes para manter o processamento em
+    no máximo 36 milhões de pixels.
 - **Critérios de aceite:** corpo acima do limite é rejeitado cedo; imagem com
   dimensões abusivas não causa consumo excessivo; concorrência é controlada.
 - **Evidência:** os três endpoints multipart usam `MaxBytesReader`; os fluxos
   de imagem passam por `ValidarImagem`; Tesseract e OCR.space compartilham um
   limite de concorrência; a resposta externa é limitada por `io.LimitReader`.
-  `go test ./...`, `go vet ./...` e `git diff --check` passaram em 17/09/2026.
+  O processamento local respeita cancelamento da requisição e limite total de
+  40 segundos, com ampliação adaptativa para imagens grandes. `go test ./...`,
+  `go vet ./...` e `git diff --check` passaram em 17/09/2026.
 
 ### P9. Remover debug sensível de produção
 
-- **Status:** Concluído — gravação permanece disponível somente por flag explícita.
+- **Status:** Em andamento — gravação está protegida por flag; diretório,
+  retenção e limpeza do servidor ainda precisam de tratamento operacional.
 - **Arquivos previstos:** `Backend/services/ocr_nota.go`,
   `Backend/services/nfce_scraper.go`, configuração e `.gitignore`.
 - **Ações:**
@@ -214,14 +236,17 @@ status, os arquivos afetados e as validações executadas.
 
 ### P10. Manter consulta QR Code segura antes de reativar
 
-- **Status:** Concluído; funcionalidade continua desativada.
+- **Status:** Concluído no código; cobertura automatizada específica ainda é
+  parcial e a funcionalidade continua desativada.
 - **Arquivos previstos:** `Backend/services/nfce_scraper.go` e handlers.
 - **Ações:**
   - [x] exigir HTTPS e rejeitar userinfo, fragmentos e portas não permitidas;
   - [x] manter allowlist exata por hostname;
   - [x] limitar resposta HTML a 2 MB;
   - [x] bloquear redirecionamentos para hosts/esquemas não permitidos;
-  - [x] não reativar scraping sem nova validação do estado real da SEFAZ.
+  - [x] não reativar scraping sem nova validação do estado real da SEFAZ;
+  - [ ] ampliar os testes automatizados para redirects, IP privado e resposta
+    acima do limite.
 - **Critérios de aceite:** testes de SSRF cobrem host, esquema, redirecionamento,
   IP privado e respostas grandes.
 - **Evidência:** validação agora aceita somente HTTPS, allowlist exata e porta
@@ -250,12 +275,13 @@ status, os arquivos afetados e as validações executadas.
   corretamente em telas pequenas e por teclado.
 - **Evidência:** o fluxo já utilizava `ModalConfirmacao`; o componente foi
   reforçado para tratar `Escape` como cancelamento e desabilitar os dois botões
-  durante a operação. A validação de build frontend continua pendente devido ao
-  bloqueio do ambiente ao Vite/esbuild.
+  durante a operação. O build frontend passou nesta etapa e no CI; a validação
+  funcional no navegador/produção continua recomendada.
 
 ### P11. Adicionar headers de segurança no nginx
 
-- **Status:** Em andamento — configuração concluída; validação no container pendente.
+- **Status:** Em andamento — configuração e validação de build concluídas;
+  validação de headers e fluxos no container/produção pendente.
 - **Arquivos previstos:** `Frontend/nginx.conf`.
 - **Ações:**
   - [x] configurar CSP compatível com React/Vite e PWA;
@@ -274,12 +300,14 @@ status, os arquivos afetados e as validações executadas.
 
 ### P12. Reforçar pipeline e reprodutibilidade
 
-- **Status:** Em andamento — actions, runner e autenticação Tailscale revisados;
-  falta ampliar as verificações de segurança e validar a migração OAuth em uma
-  execução do workflow.
+- **Status:** Em andamento — CI/deploy validado no workflow #17; a cobertura foi
+  ampliada nesta etapa e precisa ser confirmada na próxima execução.
 - **Arquivos previstos:** `.github/workflows/deploy.yml`, Dockerfiles.
 - **Ações:**
-  - [ ] adicionar testes automatizados e verificações de segurança;
+  - [x] executar `go test ./...` e `go vet ./...` no CI;
+  - [x] executar `npm audit --omit=dev --audit-level=high` no CI;
+  - [x] executar lint do frontend no CI;
+  - [x] atualizar `react-router-dom` para `7.18.2` e repetir a auditoria;
   - [x] usar `npm ci` no Dockerfile e no CI;
   - [x] fixar actions por SHA após revisão das versões;
   - [x] fixar o runner em `ubuntu-24.04` para evitar migração automática do
@@ -296,18 +324,16 @@ status, os arquivos afetados e as validações executadas.
   - [x] exigir início manual do workflow e ambiente `production` antes do deploy;
 - **Critérios de aceite:** CI detecta regressões; build usa lockfile; deploy falho
   não é apresentado como concluído.
-- **Evidência parcial:** Dockerfile passou de `npm install` para `npm ci`; o
-  workflow recebeu permissões mínimas de leitura, timeout, concorrência, pull
-  fast-forward-only, espera de prontidão e probes pós-deploy. `git diff
-  --check` passou em 17/09/2026. As execuções #15 e #16 confirmaram o deploy privado;
-  as actions foram atualizadas para runtime Node 24, o cache Go foi apontado
-  para `Backend/go.sum` e o runner foi fixado em Ubuntu 24.04, sem o aviso de
-  migração do `ubuntu-latest`.
+- **Evidência parcial:** além das proteções já registradas, o workflow agora
+  executa testes Go, auditoria de dependências e lint antes do deploy. A versão
+  vulnerável do React Router foi atualizada para `7.18.2`; `npm audit
+  --omit=dev` retornou zero vulnerabilidades. O próximo workflow deve confirmar
+  a nova sequência integral.
 
 #### P12-A. Acesso privado da VPS via Tailscale
 
-- **Status:** Concluído — OAuth, acesso privado e deploy foram validados em
-  execução bem-sucedida do workflow.
+- **Status:** Concluído com pendência operacional — OAuth, acesso privado e
+  deploy foram validados; a credencial legada ainda deve ser removida/revogada.
 - **Constatação:** o IP informado (`100.67.151.30`) é um endereço Tailscale.
   O workflow anterior usava runner GitHub hospedado e SSH direto, sem conectar
   o runner ao tailnet; por isso não funcionaria com a porta 22 pública fechada.
@@ -333,7 +359,10 @@ status, os arquivos afetados e as validações executadas.
   - [x] executar workflow e confirmar smoke tests sem abrir a porta 22 pública;
   - [x] trocar o disparo automático por `workflow_dispatch`;
   - [x] usar o ambiente `production` para permitir regras de aprovação;
-  - [x] configurar aprovação obrigatória no ambiente do GitHub.
+  - [x] configurar aprovação obrigatória no ambiente do GitHub;
+  - [ ] remover o secret legado `TAILSCALE_AUTHKEY` depois de confirmar que não
+    há workflow ativo que ainda o utiliza;
+  - [ ] revogar a auth key legada no console Tailscale.
 - **Critérios de aceite:** o workflow conecta ao tailnet, acessa a VPS pelo
   endereço Tailscale, valida a host key e executa o smoke test; uma execução
   fora do tailnet não alcança a VPS.
@@ -355,7 +384,7 @@ status, os arquivos afetados e as validações executadas.
   - [x] limite de dimensão de imagens OCR;
   - [x] limite de uploads HTTP;
   - [x] build do frontend;
-  - [ ] lint do frontend (não existe script `lint` no `package.json`).
+  - [x] lint do frontend com script `npm run lint`.
 - **Critérios de aceite:** testes rodam localmente e no CI, com casos de falha
   reproduzindo os riscos listados neste documento.
 - **Evidência parcial:** criados testes em `Backend/config`,
@@ -363,22 +392,57 @@ status, os arquivos afetados e as validações executadas.
   JWT, claims inválidos, algoritmo não permitido, invalidação de token após
   troca de senha, dados de estoque, importação transacional/idempotente,
   isolamento entre usuários e allowlist HTTPS. `go test ./...`,
-  `go vet ./...` e `git diff --check` passaram em 17/09/2026. A cobertura de
-  frontend ainda precisa ser ampliada. O build frontend passou em 17/09/2026,
-  com alerta de bundle JavaScript acima de 500 kB.
+  `go vet ./...` e `git diff --check` passaram em 17/09/2026. O frontend agora
+  possui lint executado localmente e no CI; ainda não há testes de
+  componentes/fluxos no navegador. O build frontend passou em 17/09/2026, com
+  alerta de bundle JavaScript acima de 500 kB.
 
-## Ordem de implementação proposta
+### P15. Endurecer container e superfície de rede
 
-1. P1 — JWT e falha segura de configuração.
-2. P5 — validação de entrada e integridade numérica.
-3. P6 — retirada atômica.
-4. P7 — confirmação transacional/idempotente.
-5. P2 e P3 — recuperação de senha e rate limit.
-6. P8 e P9 — uploads/OCR/debug.
-7. P11 — headers de segurança.
-8. P10 — QR Code, somente se voltar a ser necessário.
-9. P12 e P13 — pipeline e cobertura de testes contínua.
-10. P4 — migração de armazenamento de token, conforme decisão arquitetural.
+- **Status:** Pendente — requer validação do ambiente de produção antes de
+  alterar permissões, volumes ou exposição de portas.
+- **Constatações:** o backend ainda é iniciado como root no `Backend.Dockerfile`
+  e o `docker-compose.yml` publica `8090:8080` em todas as interfaces. Como a
+  publicação atual é consumida por túnel/proxy e usa bind mount em `./data`,
+  trocar o usuário ou a interface sem conferir a VPS pode interromper banco e
+  acesso externo.
+- **Ações:**
+  - [ ] executar o backend com usuário não privilegiado, validando a posse/permissão
+    do volume persistente;
+  - [ ] restringir as portas publicadas a loopback ou comprovar firewall/túnel
+    equivalente na VPS;
+  - [ ] registrar a configuração efetiva de firewall, Cloudflare Tunnel e
+    `TRUSTED_PROXY_CIDRS`.
+
+## Ordem para encerramento
+
+1. Executar o workflow atualizado e confirmar `go test`, auditoria, lint, build,
+   deploy privado e smoke tests.
+2. Validar no container/produção os headers, login, reload, logout, PWA e OCR
+   com imagens reais.
+3. Configurar `TRUSTED_PROXY_CIDRS` e decidir rate limit por conta/armazenamento
+   compartilhado se houver mais de uma instância.
+4. Revisar arquivos de debug na VPS e removê-los de forma segura, mantendo
+   `DEBUG_OCR` desativado em produção.
+5. Validar usuário não privilegiado e exposição de portas do Docker com o
+   Cloudflare Tunnel/firewall efetivos.
+6. Substituir a recuperação por pergunta por código temporário entregue por
+   canal verificado.
+7. Depois de confirmar que nenhum workflow usa a credencial antiga, remover o
+   secret `TAILSCALE_AUTHKEY` e revogar a auth key legada no Tailscale.
+
+## Pendências que impedem declarar o projeto encerrado
+
+- recuperação de senha ainda usa pergunta de segurança e não possui canal
+  verificado para entrega de código de uso único;
+- rate limit ainda é local ao processo, embora já combine IP e conta;
+- configuração efetiva de `TRUSTED_PROXY_CIDRS`, firewall e túnel não está
+  comprovada neste checkout;
+- usuário não-root do backend e bind de portas precisam ser validados com os
+  volumes e o túnel reais;
+- arquivos de debug e fluxos de headers/PWA/OCR precisam de verificação na VPS;
+- limpeza da credencial Tailscale legada ainda requer confirmação operacional;
+- não há testes automatizados de componentes ou navegador no frontend.
 
 ## Registro de progresso
 
@@ -435,6 +499,11 @@ status, os arquivos afetados e as validações executadas.
 | 17/09/2026 | P12-A | Tag `tag:github-actions` criada; credencial OAuth perdida revogada e nova credencial gerada com escopo mínimo `auth_keys: Write`; segredos não registrados no projeto | Console Tailscale; cadastro dos secrets e validação do workflow pendentes |
 | 17/09/2026 | P12-A | Secrets `TAILSCALE_OAUTH_CLIENT_ID` e `TAILSCALE_OAUTH_SECRET` cadastrados no ambiente `production`; workflow migrado para OAuth com a tag exclusiva | GitHub Environment e `.github/workflows/deploy.yml`; execução de validação pendente |
 | 17/09/2026 | P12-A | Execução #17 passou após a migração para OAuth; `build-and-test` em 28s, `deploy` em 21s e duração total de 1m44s | [GitHub Actions #17](https://github.com/Saulorangel87/App-controle-de-estoque/actions/runs/35286690984); status `Success` |
+| 17/09/2026 | P1 | JWT passou a exigir emissor, audiência, `iat` e `exp` válidos; login de contas antigas foi preservado | `go test ./...`, `go vet ./...` |
+| 17/09/2026 | P5 | Limites de nome/pergunta/resposta, senha mínima de 12 caracteres para novas credenciais e corpo estruturado de 1 MiB adicionados | `go test ./...`, `go vet ./...`, `git diff --check` |
+| 17/09/2026 | P8 | Tesseract passou a respeitar cancelamento da requisição e teto de 40s; ampliação de imagens grandes foi reduzida | `go test ./...`, `go vet ./...`, `git diff --check` |
+| 17/09/2026 | P12/P13 | React Router atualizado para `7.18.2`; lint, auditoria de produção e testes Go adicionados ao workflow | `npm run lint`, `npm run build`, `npm audit --omit=dev`, `git diff --check` |
+| 17/09/2026 | P2/P12-A/P15 | Documento corrigido com pendências reais: canal verificado de recuperação, limpeza da credencial Tailscale legada e hardening de container/rede | Revisão do código, workflow e configuração versionada |
 
 ## Registro de decisões e riscos aceitos
 

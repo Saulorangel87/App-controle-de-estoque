@@ -1,6 +1,9 @@
 package middleware
 
 import (
+	"bytes"
+	"encoding/json"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -9,7 +12,7 @@ import (
 	"time"
 )
 
-// Limita tentativas de login/cadastro por IP, para dificultar força bruta
+// Limita tentativas de login/cadastro por IP e por conta, para dificultar força bruta
 // (adivinhar senha por tentativa e erro) e criação em massa de contas falsas
 // agora que o app é público.
 //
@@ -26,7 +29,7 @@ type registroTentativas struct {
 	tentativas map[string][]time.Time
 }
 
-var tentativasPorIP = &registroTentativas{
+var tentativasPorChave = &registroTentativas{
 	tentativas: make(map[string][]time.Time),
 }
 
@@ -34,9 +37,9 @@ var tentativasPorIP = &registroTentativas{
 // atingido o limite de tentativas falhas na janela de tempo.
 func LimitarTentativas(proximo http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		ip := obterIP(r)
+		chaves := chavesDeRateLimit(r)
 
-		if bloqueado(ip) {
+		if bloqueado(chaves) {
 			w.Header().Set("Retry-After", "300")
 			http.Error(w, "muitas tentativas, tente novamente em alguns minutos", http.StatusTooManyRequests)
 			return
@@ -49,38 +52,78 @@ func LimitarTentativas(proximo http.HandlerFunc) http.HandlerFunc {
 		proximo(captura, r)
 
 		if captura.status >= 400 {
-			registrarFalha(ip)
+			registrarFalha(chaves)
 		} else {
 			// Login/cadastro deu certo: limpa o histórico desse IP, para não
 			// acumular tentativas antigas que não representam mais um risco.
-			limparIP(ip)
+			limparChaves(chaves)
 		}
 	}
 }
 
-func bloqueado(ip string) bool {
-	tentativasPorIP.mu.Lock()
-	defer tentativasPorIP.mu.Unlock()
+func bloqueado(chaves []string) bool {
+	tentativasPorChave.mu.Lock()
+	defer tentativasPorChave.mu.Unlock()
 	limparRegistrosExpirados()
 
-	tentativas := limpasAntigasTentativas(tentativasPorIP.tentativas[ip])
-	tentativasPorIP.tentativas[ip] = tentativas
+	for _, chave := range chaves {
+		tentativas := limpasAntigasTentativas(tentativasPorChave.tentativas[chave])
+		tentativasPorChave.tentativas[chave] = tentativas
 
-	return len(tentativas) >= maxTentativas
+		if len(tentativas) >= maxTentativas {
+			return true
+		}
+	}
+	return false
 }
 
-func registrarFalha(ip string) {
-	tentativasPorIP.mu.Lock()
-	defer tentativasPorIP.mu.Unlock()
+func registrarFalha(chaves []string) {
+	tentativasPorChave.mu.Lock()
+	defer tentativasPorChave.mu.Unlock()
 
-	tentativas := limpasAntigasTentativas(tentativasPorIP.tentativas[ip])
-	tentativasPorIP.tentativas[ip] = append(tentativas, time.Now())
+	for _, chave := range chaves {
+		tentativas := limpasAntigasTentativas(tentativasPorChave.tentativas[chave])
+		tentativasPorChave.tentativas[chave] = append(tentativas, time.Now())
+	}
 }
 
-func limparIP(ip string) {
-	tentativasPorIP.mu.Lock()
-	defer tentativasPorIP.mu.Unlock()
-	delete(tentativasPorIP.tentativas, ip)
+func limparChaves(chaves []string) {
+	tentativasPorChave.mu.Lock()
+	defer tentativasPorChave.mu.Unlock()
+	for _, chave := range chaves {
+		delete(tentativasPorChave.tentativas, chave)
+	}
+}
+
+// chavesDeRateLimit combina o IP com a conta informada. O corpo é restaurado
+// depois da leitura para que o handler receba exatamente a requisição original.
+// A leitura é limitada pelo mesmo teto global dos corpos estruturados.
+func chavesDeRateLimit(r *http.Request) []string {
+	chaves := []string{"ip:" + obterIP(r)}
+	nome := strings.TrimSpace(r.URL.Query().Get("nome"))
+
+	tipoConteudo := strings.ToLower(r.Header.Get("Content-Type"))
+	if nome == "" && r.Body != nil && !strings.HasPrefix(tipoConteudo, "multipart/form-data") {
+		corpo, err := io.ReadAll(io.LimitReader(r.Body, TamanhoMaximoCorpoEstruturado+1))
+		// Recoloca também o restante do corpo. Isso preserva a leitura do
+		// MaxBytesReader no handler e evita que a inspeção para rate limit
+		// transforme uma requisição originalmente grande em uma truncada que
+		// pareça válida.
+		r.Body = io.NopCloser(io.MultiReader(bytes.NewReader(corpo), r.Body))
+		if err == nil {
+			var entrada struct {
+				Nome string `json:"nome"`
+			}
+			if json.Unmarshal(corpo, &entrada) == nil {
+				nome = strings.TrimSpace(entrada.Nome)
+			}
+		}
+	}
+
+	if nome != "" {
+		chaves = append(chaves, "conta:"+strings.ToLower(nome))
+	}
+	return chaves
 }
 
 // limpasAntigasTentativas remove tentativas fora da janela de tempo, para o
@@ -142,12 +185,12 @@ func proxyConfiavel(ip string) bool {
 }
 
 func limparRegistrosExpirados() {
-	if len(tentativasPorIP.tentativas) <= 10000 {
+	if len(tentativasPorChave.tentativas) <= 10000 {
 		return
 	}
-	for ip, tentativas := range tentativasPorIP.tentativas {
+	for ip, tentativas := range tentativasPorChave.tentativas {
 		if len(limpasAntigasTentativas(tentativas)) == 0 {
-			delete(tentativasPorIP.tentativas, ip)
+			delete(tentativasPorChave.tentativas, ip)
 		}
 	}
 }

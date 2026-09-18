@@ -95,7 +95,7 @@ export default function Login() {
       const resultado = await obterPerguntaSeguranca(nome);
       setPerguntaExibida(resultado.pergunta_seguranca);
       irParaModo(MODOS.RECUPERAR_REDEFINIR);
-    } catch (e) {
+    } catch {
       setErro("Não foi possível encontrar esse usuário.");
     } finally {
       setCarregando(false);
@@ -176,7 +176,8 @@ export default function Login() {
                   modo === MODOS.CADASTRO ? "new-password" : "current-password"
                 }
                 required
-                minLength={6}
+                minLength={modo === MODOS.CADASTRO ? 12 : undefined}
+                maxLength={72}
                 value={senha}
                 onChange={(e) => setSenha(e.target.value)}
               />
@@ -277,7 +278,8 @@ export default function Login() {
                 type="password"
                 autoComplete="new-password"
                 required
-                minLength={6}
+                minLength={12}
+                maxLength={72}
                 value={novaSenha}
                 onChange={(e) => setNovaSenha(e.target.value)}
               />

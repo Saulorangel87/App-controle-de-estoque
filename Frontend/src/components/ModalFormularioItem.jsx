@@ -41,7 +41,7 @@ export default function ModalFormularioItem({ item, aoFechar, aoSalvar }) {
         estoque_minimo: Number(estoqueMinimo) || 0,
       });
       aoFechar();
-    } catch (e) {
+    } catch {
       setErro("Não foi possível salvar o item. Tente novamente.");
     } finally {
       setSalvando(false);

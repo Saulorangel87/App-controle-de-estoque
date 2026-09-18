@@ -2,6 +2,7 @@ package services
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -53,11 +54,11 @@ var (
 // O texto retornado pela API passa pelos MESMOS parsers (interpretarTextoOCR)
 // usados pro Tesseract — a diferença é só a qualidade do texto de entrada,
 // não a lógica de extrair produtos dele.
-func ExtrairProdutosDeImagemViaOCRSpace(imagem []byte, apiKey string) ([]models.ProdXML, error) {
+func ExtrairProdutosDeImagemViaOCRSpace(ctx context.Context, imagem []byte, apiKey string) ([]models.ProdXML, error) {
 	if apiKey == "" {
 		return nil, ErrOCRCloudSemChave
 	}
-	if err := adquirirLimiteOCR(); err != nil {
+	if err := adquirirLimiteOCR(ctx); err != nil {
 		return nil, err
 	}
 	defer liberarLimiteOCR()
@@ -70,7 +71,7 @@ func ExtrairProdutosDeImagemViaOCRSpace(imagem []byte, apiKey string) ([]models.
 		imagemPreparada = imagem
 	}
 
-	texto, err := chamarOCRSpace(imagemPreparada, apiKey)
+	texto, err := chamarOCRSpace(ctx, imagemPreparada, apiKey)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +98,7 @@ func ExtrairProdutosDeImagemViaOCRSpace(imagem []byte, apiKey string) ([]models.
 //   - scale=true: upscaling interno da API, ajuda em texto pequeno.
 //   - isTable=true: recomendado pela documentação especificamente pra OCR
 //     de cupom/recibo — garante que o texto volte organizado linha a linha.
-func chamarOCRSpace(imagem []byte, apiKey string) (string, error) {
+func chamarOCRSpace(ctx context.Context, imagem []byte, apiKey string) (string, error) {
 	var corpo bytes.Buffer
 	escritor := multipart.NewWriter(&corpo)
 
@@ -119,7 +120,7 @@ func chamarOCRSpace(imagem []byte, apiKey string) (string, error) {
 		return "", ErrOCRCloudFalhou
 	}
 
-	requisicao, err := http.NewRequest(http.MethodPost, ocrSpaceURL, &corpo)
+	requisicao, err := http.NewRequestWithContext(ctx, http.MethodPost, ocrSpaceURL, &corpo)
 	if err != nil {
 		return "", ErrOCRCloudFalhou
 	}
