@@ -280,8 +280,8 @@ status, os arquivos afetados e as validações executadas.
 
 ### P11. Adicionar headers de segurança no nginx
 
-- **Status:** Em andamento — configuração e validação de build concluídas;
-  validação de headers e fluxos no container/produção pendente.
+- **Status:** Em andamento — headers públicos validados; fluxos funcionais no
+  container/produção ainda pendentes.
 - **Arquivos previstos:** `Frontend/nginx.conf`.
 - **Ações:**
   - [x] configurar CSP compatível com React/Vite e PWA;
@@ -289,14 +289,16 @@ status, os arquivos afetados e as validações executadas.
   - [x] configurar `X-Content-Type-Options`;
   - [x] configurar `Referrer-Policy`;
   - [x] configurar `Permissions-Policy` e `frame-ancestors`/`X-Frame-Options`;
-  - [ ] validar headers e ausência de regressões no container em build/ambiente de produção.
+  - [x] validar a presença dos headers no frontend público em produção;
+  - [ ] validar ausência de regressões no container em build/ambiente de produção.
 - **Critérios de aceite:** headers aparecem em produção sem quebrar login, PWA,
   câmera ou chamadas à API.
-- **Evidência parcial:** adicionados headers de segurança no bloco principal e
-  na rota `/assets/` do nginx, evitando perda por herança de `add_header`.
-  `git diff --check` passou em 17/09/2026. O `npm run build` do frontend passou;
-  o nginx/Docker não está disponível localmente, portanto a sintaxe e a
-  validação visual/funcional ainda devem ser confirmadas pelo container/CI.
+- **Evidência:** adicionados headers de segurança no bloco principal e na rota
+  `/assets/` do nginx, evitando perda por herança de `add_header`. O scanner
+  público Security Headers confirmou nota A+ no frontend em 18/09/2026,
+  encontrando CSP, Permissions-Policy, Referrer-Policy, HSTS,
+  X-Content-Type-Options e X-Frame-Options. Ainda falta validar login, PWA,
+  câmera e chamadas à API no navegador/produção.
 
 ### P12. Reforçar pipeline e reprodutibilidade
 
@@ -506,6 +508,7 @@ status, os arquivos afetados e as validações executadas.
 | 17/09/2026 | P2/P12-A/P15 | Documento corrigido com pendências reais: canal verificado de recuperação, limpeza da credencial Tailscale legada e hardening de container/rede | Revisão do código, workflow e configuração versionada |
 | 17/09/2026 | P2/P5 | Política mínima ajustada de 12 para 8 caracteres em novas senhas e redefinições; credenciais antigas continuam funcionando no login | `go test ./... -count=3`, `go vet ./...`, `npm run lint`, `npm run build`, `npm audit --omit=dev --audit-level=high` |
 | 18/09/2026 | P5/P12 | Alteração da senha mínima publicada no `main` no commit `5417f6c`; deploy manual executado pelo GitHub e concluído sem erros | Relato do usuário; workflow `workflow_dispatch` concluído com sucesso |
+| 18/09/2026 | P11 | Scanner público confirmou nota A+ e a presença dos seis headers de segurança no frontend em produção | Relatório Security Headers do domínio `estoque.devsaulo.com.br` |
 
 ## Registro de decisões e riscos aceitos
 
