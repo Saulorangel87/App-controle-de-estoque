@@ -55,34 +55,33 @@ status, os arquivos afetados e as validações executadas.
 
 ### P2. Corrigir recuperação de senha
 
-- **Status:** Em andamento — invalidação e redução parcial de enumeração
-  implementadas; o provedor Resend está disponível, mas a integração segura
-  ainda precisa ser implementada.
+- **Status:** Em andamento — fluxo de e-mail implementado no código; falta
+  configurar a VPS e validar o envio real em produção.
 - **Arquivos previstos:** `Backend/main.go`, `Backend/handlers/auth.go`,
   `Backend/middleware/ratelimit.go`, frontend de login.
 - **Ações:**
-  - [x] aplicar rate limit também à consulta da pergunta;
-  - [x] uniformizar status e mensagem no endpoint de redefinição para usuário
-    inexistente e resposta incorreta;
-  - [ ] eliminar a exposição da pergunta e demais diferenças observáveis no
-    fluxo completo;
+  - [x] remover a pergunta de segurança do fluxo público de recuperação;
+  - [x] responder de forma genérica à solicitação de recuperação, sem revelar
+    se o e-mail existe;
   - [x] validar tamanho da nova senha no backend, respeitando o limite do bcrypt;
-  - [ ] adicionar e-mail associado à conta e fluxo de verificação;
+  - [x] adicionar e-mail associado à conta e confirmação por código;
   - [ ] configurar `RESEND_API_KEY` e `RESEND_FROM_EMAIL` somente na VPS;
-  - [ ] integrar envio de código temporário pelo Resend sem registrar a API key;
-  - [ ] substituir a pergunta de segurança por código temporário/e-mail;
+  - [x] integrar envio de código temporário pelo Resend sem registrar a API key;
+  - [x] substituir a pergunta de segurança por código temporário/e-mail;
+  - [x] armazenar somente o hash do código, com expiração de 15 minutos, uso
+    único e limite de cinco tentativas;
+  - [x] criar caminho autenticado para contas antigas cadastrarem e verificarem
+    o e-mail;
   - [x] invalidar sessões/tokens existentes após redefinição por `token_versao`;
 - **Critérios de aceite:** não é possível enumerar usuários por respostas distintas;
   tentativas repetidas são limitadas; senha inválida é rejeitada pela API.
-- **Evidência parcial:** a consulta da pergunta continua limitada por IP e a
-  redefinição já não diferencia usuário inexistente de resposta incorreta. O
-  cadastro/redefinição exigem senha de no mínimo 8 caracteres e até 72 bytes;
-  login continua aceitando credenciais antigas. A tabela `usuarios` ganhou
-  `token_versao`, incluída no JWT e conferida em cada requisição autenticada.
-  Ainda falta substituir a pergunta por código temporário entregue pelo Resend;
-  o aplicativo ainda não possui campo de e-mail, armazenamento de token de uso
-  único nem integração de envio. A API key e o endereço remetente deverão ficar
-  somente na configuração protegida da VPS.
+- **Evidência:** `Backend/services/email.go` envia pela API HTTPS do Resend sem
+  expor a chave; a migração cria `email`, `email_verificado_em` e
+  `codigos_email`; `Backend/handlers/auth.go` implementa cadastro, confirmação,
+  recuperação e migração autenticada de contas antigas. `go test ./...`,
+  `go vet ./...`, `npm run lint` e `npm run build` passaram em 18/09/2026. A
+  API key e o endereço remetente ainda precisam ser configurados somente no
+  `.env` protegido da VPS, seguido de teste real de cadastro/recuperação.
 
 ### P3. Tornar o rate limit confiável
 
@@ -450,16 +449,15 @@ status, os arquivos afetados e as validações executadas.
 4. Confirmar periodicamente que não há arquivos de debug na VPS.
 5. Validar usuário não privilegiado e exposição de portas do Docker com o
    Cloudflare Tunnel/firewall efetivos.
-6. Integrar o Resend, cadastrar e verificar o e-mail da conta e substituir a
-   recuperação por pergunta por código temporário.
+6. Configurar o Resend na VPS, cadastrar/verificar o e-mail da conta e testar
+   cadastro, reenvio e recuperação com código real.
 7. Depois de confirmar que nenhum workflow usa a credencial antiga, remover o
    secret `TAILSCALE_AUTHKEY` e revogar a auth key legada no Tailscale.
 
 ## Pendências que impedem declarar o projeto encerrado
 
-- recuperação de senha ainda usa pergunta de segurança; o Resend está
-  disponível, mas faltam o campo/e-mail verificado, o token de uso único e a
-  integração do backend;
+- configuração do `RESEND_API_KEY`/`RESEND_FROM_EMAIL` na VPS e teste real do
+  novo fluxo de cadastro, verificação e recuperação;
 - rate limit ainda é local ao processo, embora já combine IP e conta;
 - configuração efetiva de `TRUSTED_PROXY_CIDRS`, firewall e túnel não está
   comprovada neste checkout;
@@ -537,7 +535,8 @@ status, os arquivos afetados e as validações executadas.
 | 18/09/2026 | P8 | Validação de câmera/imagens reais de notas adiada para etapa posterior a pedido do usuário | Decisão registrada; limites e timeouts permanecem cobertos por testes |
 | 18/09/2026 | P15 | Dockerfile preparado para executar o backend com UID/GID fixos `10001:10001`; deploy e ajuste da posse do volume ainda pendentes | `Backend.Dockerfile`; validação remota confirmou o volume atual `root:root` |
 | 18/09/2026 | P9/P15 | Gravações de debug removidas; Compose passou a vincular portas ao `APP_BIND_ADDRESS` e o workflow prepara a posse do volume e usa o IP Tailscale descoberto na VPS | `go test ./... -count=3`, `go vet ./...`, `docker compose config --quiet`, `git diff --check` |
-| 18/09/2026 | P4/P12-A/P2 | PWA instalado no celular confirmado; screenshot confirma que `TAILSCALE_AUTHKEY` ainda existe; Resend disponível externamente, mas sem integração no código atual | Relato do usuário; GitHub Environment; inspeção do código |
+| 18/09/2026 | P4/P12-A/P2 | PWA instalado no celular confirmado; screenshot confirma que `TAILSCALE_AUTHKEY` ainda existe; Resend disponível externamente | Relato do usuário; GitHub Environment; painel Resend |
+| 18/09/2026 | P2 | Fluxo de e-mail implementado: cadastro/verificação, recuperação por código, hash/expiração/tentativas, migração autenticada de contas antigas e remoção do fluxo público por pergunta | `go test ./...`, `go vet ./...`, `npm run lint`, `npm run build`, `git diff --check` |
 
 ## Registro de decisões e riscos aceitos
 

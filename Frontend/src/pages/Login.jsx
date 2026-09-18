@@ -3,36 +3,28 @@ import { useNavigate } from "react-router-dom";
 import {
   login,
   cadastrar,
-  obterPerguntaSeguranca,
+  verificarEmailCadastro,
+  reenviarVerificacaoEmail,
+  solicitarRecuperacaoSenha,
   redefinirSenha,
 } from "../api/api.js";
 import { useAuth } from "../context/AuthContext.jsx";
-import { PERGUNTAS_SEGURANCA } from "../utils/perguntasSeguranca.js";
 
-// Os quatro estados possíveis da tela. Mantê-los como modos dentro do mesmo
-// componente (em vez de rotas separadas) evita duplicar o layout do cartão de login.
 const MODOS = {
   ENTRAR: "entrar",
   CADASTRO: "cadastro",
-  RECUPERAR_PERGUNTA: "recuperar-pergunta", // passo 1: informar o usuário
-  RECUPERAR_REDEFINIR: "recuperar-redefinir", // passo 2: responder e criar nova senha
+  CADASTRO_VERIFICAR: "cadastro-verificar",
+  RECUPERAR_EMAIL: "recuperar-email",
+  RECUPERAR_REDEFINIR: "recuperar-redefinir",
 };
 
 export default function Login() {
   const [modo, setModo] = useState(MODOS.ENTRAR);
-
   const [nome, setNome] = useState("");
+  const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
-  const [perguntaSeguranca, setPerguntaSeguranca] = useState(
-    PERGUNTAS_SEGURANCA[0]
-  );
-  const [respostaSeguranca, setRespostaSeguranca] = useState("");
-
-  // Usados só no fluxo de recuperação
-  const [perguntaExibida, setPerguntaExibida] = useState("");
-  const [respostaRecuperacao, setRespostaRecuperacao] = useState("");
+  const [codigo, setCodigo] = useState("");
   const [novaSenha, setNovaSenha] = useState("");
-
   const [erro, setErro] = useState("");
   const [sucesso, setSucesso] = useState("");
   const [carregando, setCarregando] = useState(false);
@@ -40,12 +32,18 @@ export default function Login() {
   const { entrar } = useAuth();
   const navegar = useNavigate();
 
-  // Centraliza a troca de modo para sempre limpar mensagens antigas —
-  // evita um erro do formulário anterior "vazar" para a tela seguinte.
   function irParaModo(novoModo) {
     setModo(novoModo);
     setErro("");
     setSucesso("");
+    setCodigo("");
+  }
+
+  function mensagemRateLimit(status) {
+    if (status === 429) {
+      return "Muitas tentativas seguidas. Aguarde alguns minutos antes de tentar de novo.";
+    }
+    return "";
   }
 
   async function aoEnviarEntrarOuCadastrar(evento) {
@@ -55,72 +53,104 @@ export default function Login() {
 
     try {
       if (modo === MODOS.CADASTRO) {
-        if (!respostaSeguranca.trim()) {
-          setErro("Escolha uma pergunta de segurança e informe a resposta.");
-          setCarregando(false);
-          return;
-        }
-        // Depois de criar a conta, já faz login automaticamente para não
-        // obrigar a pessoa a digitar tudo de novo.
-        await cadastrar(nome, senha, perguntaSeguranca, respostaSeguranca);
-        const resultado = await login(nome, senha);
-        entrar(resultado.nome);
-      } else {
-        const resultado = await login(nome, senha);
-        entrar(resultado.nome);
+        await cadastrar(nome, email, senha);
+        setModo(MODOS.CADASTRO_VERIFICAR);
+        setSucesso("Enviamos um código de confirmação para seu e-mail.");
+        return;
       }
+
+      const resultado = await login(nome, senha);
+      entrar(resultado.nome);
       navegar("/");
     } catch (e) {
-      if (e.status === 429) {
-        setErro("Muitas tentativas seguidas. Aguarde alguns minutos antes de tentar de novo.");
-      } else {
-        setErro(
-          modo === MODOS.CADASTRO
-            ? "Não foi possível criar a conta. O nome de usuário já pode estar em uso."
-            : "Usuário ou senha inválidos."
-        );
-      }
+      const limite = mensagemRateLimit(e.status);
+      setErro(
+        limite ||
+          (modo === MODOS.ENTRAR && e.status === 403
+            ? "Confirme seu e-mail antes de entrar."
+            : modo === MODOS.CADASTRO
+            ? e.status === 503
+              ? "O envio de e-mail está temporariamente indisponível. Tente novamente mais tarde."
+              : e.status === 409
+              ? "Esse nome de usuário ou e-mail já está cadastrado."
+              : "Não foi possível criar a conta. Confira os dados informados."
+            : "Usuário ou senha inválidos.")
+      );
     } finally {
       setCarregando(false);
     }
   }
 
-  // Passo 1 da recuperação: busca a pergunta de segurança cadastrada para o usuário.
-  async function aoBuscarPergunta(evento) {
+  async function aoVerificarCadastro(evento) {
     evento.preventDefault();
     setErro("");
     setCarregando(true);
-
     try {
-      const resultado = await obterPerguntaSeguranca(nome);
-      setPerguntaExibida(resultado.pergunta_seguranca);
-      irParaModo(MODOS.RECUPERAR_REDEFINIR);
-    } catch {
-      setErro("Não foi possível encontrar esse usuário.");
+      await verificarEmailCadastro(nome, codigo);
+      const resultado = await login(nome, senha);
+      entrar(resultado.nome);
+      navegar("/");
+    } catch (e) {
+      setErro(
+        mensagemRateLimit(e.status) || "Código inválido ou expirado. Solicite um novo código."
+      );
     } finally {
       setCarregando(false);
     }
   }
 
-  // Passo 2 da recuperação: confere a resposta e define a nova senha.
+  async function aoReenviarVerificacao() {
+    setErro("");
+    setSucesso("");
+    setCarregando(true);
+    try {
+      await reenviarVerificacaoEmail(nome);
+      setSucesso("Se a conta estiver pendente, um novo código será enviado em breve.");
+    } catch (e) {
+      setErro(
+        mensagemRateLimit(e.status) ||
+          "Não foi possível reenviar o código. Tente novamente mais tarde."
+      );
+    } finally {
+      setCarregando(false);
+    }
+  }
+
+  async function aoSolicitarRecuperacao(evento) {
+    evento.preventDefault();
+    setErro("");
+    setCarregando(true);
+    try {
+      await solicitarRecuperacaoSenha(email);
+      setModo(MODOS.RECUPERAR_REDEFINIR);
+      setSucesso("Se o e-mail estiver cadastrado, você receberá um código em breve.");
+    } catch (e) {
+      setErro(
+        mensagemRateLimit(e.status) ||
+          (e.status === 503
+            ? "O envio de e-mail está temporariamente indisponível."
+            : "Informe um e-mail válido para continuar.")
+      );
+    } finally {
+      setCarregando(false);
+    }
+  }
+
   async function aoRedefinirSenha(evento) {
     evento.preventDefault();
     setErro("");
     setCarregando(true);
-
     try {
-      await redefinirSenha(nome, respostaRecuperacao, novaSenha);
+      await redefinirSenha(email, codigo, novaSenha);
       setSenha("");
-      setRespostaRecuperacao("");
+      setCodigo("");
       setNovaSenha("");
       irParaModo(MODOS.ENTRAR);
       setSucesso("Senha redefinida! Já pode entrar com a nova senha.");
     } catch (e) {
-      if (e.status === 429) {
-        setErro("Muitas tentativas seguidas. Aguarde alguns minutos antes de tentar de novo.");
-      } else {
-        setErro("Resposta de segurança incorreta.");
-      }
+      setErro(
+        mensagemRateLimit(e.status) || "Código inválido ou expirado. Solicite um novo código."
+      );
     } finally {
       setCarregando(false);
     }
@@ -129,7 +159,8 @@ export default function Login() {
   const tituloPorModo = {
     [MODOS.ENTRAR]: "Entrar",
     [MODOS.CADASTRO]: "Criar conta",
-    [MODOS.RECUPERAR_PERGUNTA]: "Recuperar senha",
+    [MODOS.CADASTRO_VERIFICAR]: "Confirmar e-mail",
+    [MODOS.RECUPERAR_EMAIL]: "Recuperar senha",
     [MODOS.RECUPERAR_REDEFINIR]: "Recuperar senha",
   };
 
@@ -145,12 +176,15 @@ export default function Login() {
           </p>
         )}
         {sucesso && (
-          <p className="mensagem-erro" role="status" style={{ color: "var(--cor-primaria)", backgroundColor: "transparent", padding: 0 }}>
+          <p
+            className="mensagem-erro"
+            role="status"
+            style={{ color: "var(--cor-primaria)", backgroundColor: "transparent", padding: 0 }}
+          >
             {sucesso}
           </p>
         )}
 
-        {/* ---------- Entrar / Criar conta ---------- */}
         {(modo === MODOS.ENTRAR || modo === MODOS.CADASTRO) && (
           <form onSubmit={aoEnviarEntrarOuCadastrar} noValidate>
             <div className="campo-formulario">
@@ -166,15 +200,31 @@ export default function Login() {
               />
             </div>
 
+            {modo === MODOS.CADASTRO && (
+              <div className="campo-formulario">
+                <label htmlFor="campo-email">E-mail</label>
+                <input
+                  id="campo-email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+                <p className="subtitulo" style={{ marginTop: "4px" }}>
+                  Usaremos este e-mail para confirmar a conta e recuperar a senha.
+                </p>
+              </div>
+            )}
+
             <div className="campo-formulario">
               <label htmlFor="campo-senha">Senha</label>
               <input
                 id="campo-senha"
                 name="senha"
                 type="password"
-                autoComplete={
-                  modo === MODOS.CADASTRO ? "new-password" : "current-password"
-                }
+                autoComplete={modo === MODOS.CADASTRO ? "new-password" : "current-password"}
                 required
                 minLength={modo === MODOS.CADASTRO ? 8 : undefined}
                 maxLength={72}
@@ -183,94 +233,98 @@ export default function Login() {
               />
             </div>
 
-            {modo === MODOS.CADASTRO && (
-              <>
-                <div className="campo-formulario">
-                  <label htmlFor="campo-pergunta">Pergunta de segurança</label>
-                  <select
-                    id="campo-pergunta"
-                    value={perguntaSeguranca}
-                    onChange={(e) => setPerguntaSeguranca(e.target.value)}
-                  >
-                    {PERGUNTAS_SEGURANCA.map((pergunta) => (
-                      <option key={pergunta} value={pergunta}>
-                        {pergunta}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="campo-formulario">
-                  <label htmlFor="campo-resposta">Resposta</label>
-                  <input
-                    id="campo-resposta"
-                    type="text"
-                    required
-                    value={respostaSeguranca}
-                    onChange={(e) => setRespostaSeguranca(e.target.value)}
-                  />
-                  <p className="subtitulo" style={{ marginTop: "4px" }}>
-                    Você vai precisar dessa resposta se esquecer a senha.
-                  </p>
-                </div>
-              </>
-            )}
-
             <button
               type="submit"
               className="botao botao-primario"
               style={{ width: "100%", justifyContent: "center" }}
               disabled={carregando}
             >
-              {carregando
-                ? "Aguarde..."
-                : modo === MODOS.CADASTRO
-                ? "Criar conta"
-                : "Entrar"}
+              {carregando ? "Aguarde..." : modo === MODOS.CADASTRO ? "Criar conta" : "Entrar"}
             </button>
           </form>
         )}
 
-        {/* ---------- Recuperar senha: passo 1 (informar o usuário) ---------- */}
-        {modo === MODOS.RECUPERAR_PERGUNTA && (
-          <form onSubmit={aoBuscarPergunta} noValidate>
+        {modo === MODOS.CADASTRO_VERIFICAR && (
+          <form onSubmit={aoVerificarCadastro} noValidate>
+            <p className="subtitulo">
+              Digite o código de 8 números enviado para <strong>{email}</strong>.
+            </p>
             <div className="campo-formulario">
-              <label htmlFor="campo-nome-recuperar">Nome de usuário</label>
+              <label htmlFor="campo-codigo-cadastro">Código de confirmação</label>
               <input
-                id="campo-nome-recuperar"
+                id="campo-codigo-cadastro"
                 type="text"
-                autoComplete="username"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern="[0-9]{8}"
+                maxLength={8}
                 required
-                value={nome}
-                onChange={(e) => setNome(e.target.value)}
+                value={codigo}
+                onChange={(e) => setCodigo(e.target.value.replace(/\D/g, ""))}
               />
             </div>
-
             <button
               type="submit"
               className="botao botao-primario"
               style={{ width: "100%", justifyContent: "center" }}
               disabled={carregando}
             >
-              {carregando ? "Buscando..." : "Continuar"}
+              {carregando ? "Confirmando..." : "Confirmar e-mail"}
+            </button>
+            <button
+              type="button"
+              className="alternar-modo"
+              onClick={aoReenviarVerificacao}
+              disabled={carregando}
+            >
+              Reenviar código
             </button>
           </form>
         )}
 
-        {/* ---------- Recuperar senha: passo 2 (responder e definir nova senha) ---------- */}
+        {modo === MODOS.RECUPERAR_EMAIL && (
+          <form onSubmit={aoSolicitarRecuperacao} noValidate>
+            <div className="campo-formulario">
+              <label htmlFor="campo-email-recuperar">E-mail da conta</label>
+              <input
+                id="campo-email-recuperar"
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <button
+              type="submit"
+              className="botao botao-primario"
+              style={{ width: "100%", justifyContent: "center" }}
+              disabled={carregando}
+            >
+              {carregando ? "Enviando..." : "Enviar código"}
+            </button>
+          </form>
+        )}
+
         {modo === MODOS.RECUPERAR_REDEFINIR && (
           <form onSubmit={aoRedefinirSenha} noValidate>
+            <p className="subtitulo">
+              Informe o código recebido em <strong>{email}</strong>.
+            </p>
             <div className="campo-formulario">
-              <label htmlFor="campo-resposta-recuperar">{perguntaExibida}</label>
+              <label htmlFor="campo-codigo-recuperar">Código de recuperação</label>
               <input
-                id="campo-resposta-recuperar"
+                id="campo-codigo-recuperar"
                 type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern="[0-9]{8}"
+                maxLength={8}
                 required
-                value={respostaRecuperacao}
-                onChange={(e) => setRespostaRecuperacao(e.target.value)}
+                value={codigo}
+                onChange={(e) => setCodigo(e.target.value.replace(/\D/g, ""))}
               />
             </div>
-
             <div className="campo-formulario">
               <label htmlFor="campo-nova-senha">Nova senha</label>
               <input
@@ -284,7 +338,6 @@ export default function Login() {
                 onChange={(e) => setNovaSenha(e.target.value)}
               />
             </div>
-
             <button
               type="submit"
               className="botao botao-primario"
@@ -296,43 +349,29 @@ export default function Login() {
           </form>
         )}
 
-        {/* ---------- Links para alternar entre os modos ---------- */}
         {modo === MODOS.ENTRAR && (
           <>
-            <button
-              type="button"
-              className="alternar-modo"
-              onClick={() => irParaModo(MODOS.CADASTRO)}
-            >
+            <button type="button" className="alternar-modo" onClick={() => irParaModo(MODOS.CADASTRO)}>
               Ainda não tenho conta — criar
             </button>
             <button
               type="button"
               className="link-recuperar-senha"
-              onClick={() => irParaModo(MODOS.RECUPERAR_PERGUNTA)}
+              onClick={() => irParaModo(MODOS.RECUPERAR_EMAIL)}
             >
               Esqueci minha senha
             </button>
           </>
         )}
 
-        {modo === MODOS.CADASTRO && (
-          <button
-            type="button"
-            className="alternar-modo"
-            onClick={() => irParaModo(MODOS.ENTRAR)}
-          >
+        {(modo === MODOS.CADASTRO || modo === MODOS.CADASTRO_VERIFICAR) && (
+          <button type="button" className="alternar-modo" onClick={() => irParaModo(MODOS.ENTRAR)}>
             Já tenho conta — entrar
           </button>
         )}
 
-        {(modo === MODOS.RECUPERAR_PERGUNTA ||
-          modo === MODOS.RECUPERAR_REDEFINIR) && (
-          <button
-            type="button"
-            className="alternar-modo"
-            onClick={() => irParaModo(MODOS.ENTRAR)}
-          >
+        {(modo === MODOS.RECUPERAR_EMAIL || modo === MODOS.RECUPERAR_REDEFINIR) && (
+          <button type="button" className="alternar-modo" onClick={() => irParaModo(MODOS.ENTRAR)}>
             Voltar para o login
           </button>
         )}

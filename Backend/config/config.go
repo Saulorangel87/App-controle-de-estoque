@@ -48,6 +48,14 @@ func ChaveOCRSpace() string {
 	return os.Getenv("OCR_SPACE_API_KEY")
 }
 
+func ChaveResend() string {
+	return strings.TrimSpace(os.Getenv("RESEND_API_KEY"))
+}
+
+func RemetenteResend() string {
+	return strings.TrimSpace(os.Getenv("RESEND_FROM_EMAIL"))
+}
+
 // CookieSeguro acompanha o ambiente publicado. Em produção, CORS_ORIGIN deve
 // ser HTTPS; no desenvolvimento local o cookie precisa continuar funcionando
 // sobre HTTP localhost.

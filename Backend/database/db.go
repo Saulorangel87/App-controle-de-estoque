@@ -70,6 +70,26 @@ func criarTabelas() {
 	if _, err := DB.Exec(confirmacoesImportacao); err != nil {
 		log.Fatal("erro ao criar tabela de confirmações:", err)
 	}
+
+	if _, err := DB.Exec(`
+		CREATE TABLE IF NOT EXISTS codigos_email (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			usuario_id INTEGER NOT NULL,
+			finalidade TEXT NOT NULL,
+			codigo_hash TEXT NOT NULL,
+			expira_em TEXT NOT NULL,
+			criado_em TEXT NOT NULL,
+			tentativas INTEGER NOT NULL DEFAULT 0,
+			usado_em TEXT NOT NULL DEFAULT '',
+			FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+		)
+	`); err != nil {
+		log.Fatal("erro ao criar tabela de códigos de e-mail:", err)
+	}
+	if _, err := DB.Exec(`CREATE INDEX IF NOT EXISTS idx_codigos_email_usuario
+		ON codigos_email (usuario_id, finalidade, id DESC)`); err != nil {
+		log.Fatal("erro ao criar índice de códigos de e-mail:", err)
+	}
 }
 
 // migrarColunasSeguranca adiciona as colunas de pergunta/resposta de segurança
@@ -91,6 +111,20 @@ func migrarColunasSeguranca() {
 		if _, err := DB.Exec(`ALTER TABLE usuarios ADD COLUMN token_versao INTEGER NOT NULL DEFAULT 0`); err != nil {
 			log.Fatal("erro ao migrar coluna token_versao:", err)
 		}
+	}
+	if !colunaExiste("usuarios", "email") {
+		if _, err := DB.Exec(`ALTER TABLE usuarios ADD COLUMN email TEXT NOT NULL DEFAULT ''`); err != nil {
+			log.Fatal("erro ao migrar coluna email:", err)
+		}
+	}
+	if !colunaExiste("usuarios", "email_verificado_em") {
+		if _, err := DB.Exec(`ALTER TABLE usuarios ADD COLUMN email_verificado_em TEXT NOT NULL DEFAULT ''`); err != nil {
+			log.Fatal("erro ao migrar coluna email_verificado_em:", err)
+		}
+	}
+	if _, err := DB.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_usuarios_email
+		ON usuarios (lower(email)) WHERE email <> ''`); err != nil {
+		log.Fatal("erro ao criar índice de e-mail:", err)
 	}
 }
 

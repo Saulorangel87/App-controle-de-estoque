@@ -30,15 +30,20 @@ func main() {
 		w.Write([]byte("ok"))
 	})
 
-	// Autenticação e recuperação de senha (não exigem token). Login e cadastro passam
-	// por LimitarTentativas: 5 tentativas com falha por IP e conta a cada 5 min — login/cadastro
-	// certos nunca são bloqueados, só sequências de erro.
+	// Autenticação, confirmação de e-mail e recuperação de senha não exigem token.
+	// Login/cadastro e códigos passam por LimitarTentativas: 5 falhas por IP e conta
+	// a cada 5 min.
 	mux.HandleFunc("POST /cadastro", middleware.LimitarTentativas(handlers.Cadastrar))
+	mux.HandleFunc("POST /cadastro/verificar-email", middleware.LimitarTentativas(handlers.VerificarEmailCadastro))
+	mux.HandleFunc("POST /cadastro/reenviar-verificacao", middleware.LimitarTentativas(handlers.ReenviarVerificacaoEmail))
 	mux.HandleFunc("POST /login", middleware.LimitarTentativas(handlers.Login))
 	mux.HandleFunc("GET /sessao", middleware.Autenticar(handlers.SessaoAtual))
 	mux.HandleFunc("POST /logout", middleware.Autenticar(handlers.EncerrarSessao))
-	mux.HandleFunc("GET /recuperar-senha/pergunta", middleware.LimitarTentativas(handlers.ObterPerguntaSeguranca))
+	mux.HandleFunc("POST /recuperar-senha/solicitar", middleware.LimitarTentativas(handlers.SolicitarRecuperacaoSenha))
 	mux.HandleFunc("POST /recuperar-senha", middleware.LimitarTentativas(handlers.RedefinirSenha))
+	mux.HandleFunc("GET /conta/email", middleware.Autenticar(handlers.ObterEmailConta))
+	mux.HandleFunc("POST /conta/email", middleware.Autenticar(handlers.SolicitarEmailConta))
+	mux.HandleFunc("POST /conta/email/verificar", middleware.Autenticar(handlers.VerificarEmailConta))
 
 	// Itens (todas exigem token válido via middleware.Autenticar).
 	mux.HandleFunc("GET /itens", middleware.Autenticar(handlers.ListarItens))

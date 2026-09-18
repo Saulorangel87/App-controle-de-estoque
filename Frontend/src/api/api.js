@@ -49,15 +49,28 @@ async function requisitar(caminho, opcoes = {}, token = null) {
 
 // ---------- Autenticação ----------
 
-export function cadastrar(nome, senha, perguntaSeguranca, respostaSeguranca) {
+export function cadastrar(nome, email, senha) {
   return requisitar("/cadastro", {
     method: "POST",
     body: JSON.stringify({
       nome,
+      email,
       senha,
-      pergunta_seguranca: perguntaSeguranca,
-      resposta_seguranca: respostaSeguranca,
     }),
+  });
+}
+
+export function verificarEmailCadastro(nome, codigo) {
+  return requisitar("/cadastro/verificar-email", {
+    method: "POST",
+    body: JSON.stringify({ nome, codigo }),
+  });
+}
+
+export function reenviarVerificacaoEmail(nome) {
+  return requisitar("/cadastro/reenviar-verificacao", {
+    method: "POST",
+    body: JSON.stringify({ nome }),
   });
 }
 
@@ -76,17 +89,38 @@ export function encerrarSessao() {
   return requisitar("/logout", { method: "POST" });
 }
 
-export function obterPerguntaSeguranca(nome) {
-  return requisitar(`/recuperar-senha/pergunta?nome=${encodeURIComponent(nome)}`, {
-    method: "GET",
+export function solicitarRecuperacaoSenha(email) {
+  return requisitar("/recuperar-senha/solicitar", {
+    method: "POST",
+    body: JSON.stringify({ email }),
   });
 }
 
-export function redefinirSenha(nome, resposta, novaSenha) {
+export function redefinirSenha(email, codigo, novaSenha) {
   return requisitar("/recuperar-senha", {
     method: "POST",
-    body: JSON.stringify({ nome, resposta, nova_senha: novaSenha }),
+    body: JSON.stringify({ email, codigo, nova_senha: novaSenha }),
   });
+}
+
+export function obterEmailConta(token) {
+  return requisitar("/conta/email", { method: "GET" }, token);
+}
+
+export function solicitarEmailConta(email, token) {
+  return requisitar(
+    "/conta/email",
+    { method: "POST", body: JSON.stringify({ email }) },
+    token
+  );
+}
+
+export function verificarEmailConta(codigo, token) {
+  return requisitar(
+    "/conta/email/verificar",
+    { method: "POST", body: JSON.stringify({ codigo }) },
+    token
+  );
 }
 
 // ---------- Itens ----------

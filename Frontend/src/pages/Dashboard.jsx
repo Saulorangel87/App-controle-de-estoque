@@ -15,6 +15,7 @@ import ModalFormularioItem from "../components/ModalFormularioItem.jsx";
 import ModalRetirar from "../components/ModalRetirar.jsx";
 import ModalConfirmacao from "../components/ModalConfirmacao.jsx";
 import ModalImportarNota from "../components/ModalImportarNota.jsx";
+import ModalEmailConta from "../components/ModalEmailConta.jsx";
 
 export default function Dashboard() {
   const { token, nome, sair } = useAuth();
@@ -33,6 +34,7 @@ export default function Dashboard() {
   const [itemParaRetirar, setItemParaRetirar] = useState(null);
   const [itemParaExcluir, setItemParaExcluir] = useState(null);
   const [importandoNota, setImportandoNota] = useState(false);
+  const [emailContaAberto, setEmailContaAberto] = useState(false);
 
   const carregarItens = useCallback(async () => {
     setCarregando(true);
@@ -159,6 +161,14 @@ export default function Dashboard() {
             <span aria-hidden="true">{tema === "claro" ? "🌙" : "☀️"}</span>
           </button>
 
+          <button
+            type="button"
+            className="botao botao-secundario"
+            onClick={() => setEmailContaAberto(true)}
+          >
+            E-mail
+          </button>
+
           {nomeExibicao && (
             <span
               className="badge-conta"
@@ -243,6 +253,13 @@ export default function Dashboard() {
           itensEstoque={itens}
           aoFechar={() => setImportandoNota(false)}
           aoConcluir={carregarItens}
+        />
+      )}
+
+      {emailContaAberto && (
+        <ModalEmailConta
+          token={token}
+          aoFechar={() => setEmailContaAberto(false)}
         />
       )}
     </main>

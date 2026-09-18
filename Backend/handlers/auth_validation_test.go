@@ -36,6 +36,30 @@ func TestValidarCampoAutenticacaoLimitaTamanhoEBrancos(t *testing.T) {
 	}
 }
 
+func TestValidarEmailAceitaFormatoBasicoERejeitaCabecalho(t *testing.T) {
+	if err := validarEmail("Pessoa@Exemplo.com"); err != nil {
+		t.Fatalf("e-mail válido foi rejeitado: %v", err)
+	}
+	if err := validarEmail("pessoa@example.com\r\nBcc: outro@example.com"); err == nil {
+		t.Fatal("tentativa de injeção de cabeçalho foi aceita")
+	}
+	if err := validarEmail("nao-e-mail"); err == nil {
+		t.Fatal("texto sem e-mail foi aceito")
+	}
+}
+
+func TestValidarCodigoExigeOitoDigitos(t *testing.T) {
+	if err := validarCodigo("12345678"); err != nil {
+		t.Fatalf("código válido foi rejeitado: %v", err)
+	}
+	if err := validarCodigo("1234567"); err == nil {
+		t.Fatal("código curto foi aceito")
+	}
+	if err := validarCodigo("1234567a"); err == nil {
+		t.Fatal("código com letra foi aceito")
+	}
+}
+
 func TestDecodificarJSONRejeitaConteudoExtra(t *testing.T) {
 	requisicao := httptest.NewRequest(
 		http.MethodPost,
