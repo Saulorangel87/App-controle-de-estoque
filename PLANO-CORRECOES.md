@@ -102,6 +102,10 @@ status, os arquivos afetados e as validações executadas.
   17/09/2026. Antes do próximo deploy, configurar
   `TRUSTED_PROXY_CIDRS` com a rede real do proxy/túnel; sem essa variável o
   sistema fica seguro contra falsificação, mas pode agrupar usuários pelo peer.
+  A inspeção da VPS em 18/09/2026 confirmou que a variável está vazia; o
+  Cloudflared está no bridge `172.17.0.0/16` e os containers do estoque estão
+  no bridge `172.22.0.0/16`. Ainda falta confirmar o endereço de peer efetivo
+  recebido pelo backend antes de cadastrar um CIDR confiável.
 
 ### P4. Proteger tokens no frontend
 
@@ -191,8 +195,9 @@ status, os arquivos afetados e as validações executadas.
 ### P8. Limitar efetivamente uploads e processamento
 
 - **Status:** Em andamento — limites de concorrência, corpo e dimensão concluídos;
-  timeout e teto de processamento adicionados nesta etapa; imagens reais ainda
-  precisam de validação funcional.
+  timeout e teto de processamento adicionados nesta etapa. A validação com
+  imagens reais/câmera foi adiada para uma etapa posterior, conforme decisão do
+  usuário.
 - **Arquivos previstos:** `Backend/main.go`,
   `Backend/handlers/notas_fiscais.go`, `Backend/services/ocr_nota.go` e
   `Backend/services/ocr_cloud.go`.
@@ -217,22 +222,23 @@ status, os arquivos afetados e as validações executadas.
 
 ### P9. Remover debug sensível de produção
 
-- **Status:** Em andamento — gravação está protegida por flag; diretório,
-  retenção e limpeza do servidor ainda precisam de tratamento operacional.
+- **Status:** Concluído — gravações de texto OCR e HTML fiscal removidas do
+  código; temporários de imagem continuam usando `os.CreateTemp` e remoção
+  garantida ao final do processamento.
 - **Arquivos previstos:** `Backend/services/ocr_nota.go`,
   `Backend/services/nfce_scraper.go`, configuração e `.gitignore`.
 - **Ações:**
-  - [x] remover gravações automáticas por padrão;
-  - [x] proteger a gravação por `DEBUG_OCR=true` explícito;
-  - [x] usar permissão `0600` para os arquivos quando o debug for habilitado;
-  - [ ] usar diretório temporário seguro e retenção controlada;
-  - [ ] revisar/remover arquivos existentes no servidor.
+  - [x] remover gravações automáticas de texto OCR e HTML fiscal;
+  - [x] usar diretório temporário seguro para imagens processadas;
+  - [x] garantir remoção do arquivo temporário após o processamento;
+  - [x] revisar/remover arquivos existentes no servidor; nenhum arquivo de debug
+    foi encontrado na implantação atual.
 - **Critérios de aceite:** produção não grava texto OCR, HTML de nota ou conteúdo
   fiscal sem configuração explícita e auditável.
-- **Evidência:** `DebugOCRAtivo()` retorna falso por padrão e protege os dois
-  pontos de gravação (`debug_ocr_ultimo_texto.txt` e
-  `debug_nfce_ultima_consulta.html`). `go test ./...`, `go vet ./...` e
-  `git diff --check` passaram em 17/09/2026.
+- **Evidência:** as funções de gravação de `debug_ocr_ultimo_texto.txt` e
+  `debug_nfce_ultima_consulta.html` foram removidas; o OCR local usa arquivo
+  temporário com `defer os.Remove`. A inspeção remota em 18/09/2026 confirmou
+  nenhum arquivo de debug no diretório do projeto.
 
 ### P10. Manter consulta QR Code segura antes de reativar
 
@@ -401,18 +407,28 @@ status, os arquivos afetados e as validações executadas.
 
 ### P15. Endurecer container e superfície de rede
 
-- **Status:** Pendente — requer validação do ambiente de produção antes de
-  alterar permissões, volumes ou exposição de portas.
-- **Constatações:** o backend ainda é iniciado como root no `Backend.Dockerfile`
-  e o `docker-compose.yml` publica `8090:8080` em todas as interfaces. Como a
-  publicação atual é consumida por túnel/proxy e usa bind mount em `./data`,
-  trocar o usuário ou a interface sem conferir a VPS pode interromper banco e
-  acesso externo.
+- **Status:** Em andamento — inspeção da VPS concluída; alterações de usuário,
+  portas e firewall ainda dependem da confirmação da rota efetiva do túnel.
+- **Constatações:** a implantação atual ainda inicia o backend como root; o
+  `Backend.Dockerfile` foi preparado nesta etapa para usar o usuário fixo
+  `10001:10001`, mas ainda não foi publicado na VPS. O `docker-compose.yml`
+  anterior publicava `8090:8080` e `8092:80` em todas as interfaces IPv4 e
+  IPv6; a correção passou a exigir `APP_BIND_ADDRESS`, com fallback local e
+  workflow configurando o IP Tailscale. O Cloudflared está ativo no container
+  `cloudflared-tunnel`, no bridge `172.17.0.0/16`, enquanto os containers do
+  estoque estão no bridge `172.22.0.0/16`. A cadeia `DOCKER-USER` encaminha
+  as portas do estoque para fora do bridge da aplicação, sem uma regra de
+  bloqueio específica; a confirmação manual do usuário indica que a Oracle
+  Cloud não possui portas de aplicação abertas externamente.
 - **Ações:**
+  - [x] inspecionar containers, usuário efetivo, volumes, portas, firewall e
+    túnel na VPS;
   - [ ] executar o backend com usuário não privilegiado, validando a posse/permissão
-    do volume persistente;
-  - [ ] restringir as portas publicadas a loopback ou comprovar firewall/túnel
-    equivalente na VPS;
+    do volume persistente; o workflow já prepara a posse `10001:10001` antes
+    da recriação;
+  - [x] restringir as portas publicadas ao endereço Tailscale da VPS no compose;
+  - [x] confirmar manualmente que a Oracle Cloud não possui portas de aplicação
+    abertas externamente;
   - [ ] registrar a configuração efetiva de firewall, Cloudflare Tunnel e
     `TRUSTED_PROXY_CIDRS`.
 
@@ -424,8 +440,7 @@ status, os arquivos afetados e as validações executadas.
    com imagens reais.
 3. Configurar `TRUSTED_PROXY_CIDRS` e decidir rate limit por conta/armazenamento
    compartilhado se houver mais de uma instância.
-4. Revisar arquivos de debug na VPS e removê-los de forma segura, mantendo
-   `DEBUG_OCR` desativado em produção.
+4. Confirmar periodicamente que não há arquivos de debug na VPS.
 5. Validar usuário não privilegiado e exposição de portas do Docker com o
    Cloudflare Tunnel/firewall efetivos.
 6. Substituir a recuperação por pergunta por código temporário entregue por
@@ -509,6 +524,10 @@ status, os arquivos afetados e as validações executadas.
 | 17/09/2026 | P2/P5 | Política mínima ajustada de 12 para 8 caracteres em novas senhas e redefinições; credenciais antigas continuam funcionando no login | `go test ./... -count=3`, `go vet ./...`, `npm run lint`, `npm run build`, `npm audit --omit=dev --audit-level=high` |
 | 18/09/2026 | P5/P12 | Alteração da senha mínima publicada no `main` no commit `5417f6c`; deploy manual executado pelo GitHub e concluído sem erros | Relato do usuário; workflow `workflow_dispatch` concluído com sucesso |
 | 18/09/2026 | P11 | Scanner público confirmou nota A+ e a presença dos seis headers de segurança no frontend em produção | Relatório Security Headers do domínio `estoque.devsaulo.com.br` |
+| 18/09/2026 | P3/P9/P15 | Inspeção remota confirmou Tailscale/SSH acessíveis, containers ativos, gravação de debug ausente e nenhum arquivo de debug; backend ainda roda como root, portas 8090/8092 permanecem na implantação atual e `TRUSTED_PROXY_CIDRS` está vazio | VPS `100.67.151.30`; fingerprint ED25519 conferida; diagnóstico somente leitura |
+| 18/09/2026 | P8 | Validação de câmera/imagens reais de notas adiada para etapa posterior a pedido do usuário | Decisão registrada; limites e timeouts permanecem cobertos por testes |
+| 18/09/2026 | P15 | Dockerfile preparado para executar o backend com UID/GID fixos `10001:10001`; deploy e ajuste da posse do volume ainda pendentes | `Backend.Dockerfile`; validação remota confirmou o volume atual `root:root` |
+| 18/09/2026 | P9/P15 | Gravações de debug removidas; Compose passou a vincular portas ao `APP_BIND_ADDRESS` e o workflow prepara a posse do volume e usa o IP Tailscale descoberto na VPS | `go test ./... -count=3`, `go vet ./...`, `docker compose config --quiet`, `git diff --check` |
 
 ## Registro de decisões e riscos aceitos
 

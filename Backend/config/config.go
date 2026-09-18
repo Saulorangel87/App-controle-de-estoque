@@ -48,13 +48,6 @@ func ChaveOCRSpace() string {
 	return os.Getenv("OCR_SPACE_API_KEY")
 }
 
-// DebugOCRAtivo é deliberadamente falso por padrão. Os textos reconhecidos e
-// HTML de notas podem conter dados fiscais ou pessoais e só devem ser gravados
-// durante uma investigação local explicitamente autorizada.
-func DebugOCRAtivo() bool {
-	return strings.EqualFold(strings.TrimSpace(os.Getenv("DEBUG_OCR")), "true")
-}
-
 // CookieSeguro acompanha o ambiente publicado. Em produção, CORS_ORIGIN deve
 // ser HTTPS; no desenvolvimento local o cookie precisa continuar funcionando
 // sobre HTTP localhost.

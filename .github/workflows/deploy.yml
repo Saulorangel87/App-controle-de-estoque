@@ -109,7 +109,14 @@ jobs:
           set -e
           cd ~/apps/App-controle-de-estoque
           git pull --ff-only origin main
-          sudo docker compose up -d --build
+          sudo chown -R 10001:10001 data
+          sudo chmod 750 data
+          app_bind_address="$(tailscale ip -4 | head -n 1)"
+          if [ -z "$app_bind_address" ]; then
+            echo "Falha: não foi possível descobrir o IP Tailscale da VPS."
+            exit 1
+          fi
+          sudo env APP_BIND_ADDRESS="$app_bind_address" docker compose up -d --build
 
           aguardar_http() {
             local url="$1"
@@ -130,6 +137,6 @@ jobs:
             return 1
           }
 
-          aguardar_http http://127.0.0.1:8090/health
-          aguardar_http http://127.0.0.1:8092/
+          aguardar_http "http://${app_bind_address}:8090/health"
+          aguardar_http "http://${app_bind_address}:8092/"
           REMOTE

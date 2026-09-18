@@ -97,6 +97,9 @@ App controle de estoque/
 ## Deploy — concluído
 - Domínios: `estoque.devsaulo.com.br` (frontend, porta 8092) e
   `estoque-api.devsaulo.com.br` (backend, porta 8090)
+- O workflow descobre o IP IPv4 do Tailscale e define `APP_BIND_ADDRESS` antes
+  do Compose; assim, as portas de aplicação ficam vinculadas à interface
+  privada usada pelo Cloudflare Tunnel, e não a todas as interfaces da VPS.
 - CORS, caminho do banco (`DB_PATH`) e URL da API (`VITE_API_URL`) configuráveis
   via variável de ambiente/build arg
 - Banco SQLite persistido via volume Docker (`./data`), sobrevive a rebuilds

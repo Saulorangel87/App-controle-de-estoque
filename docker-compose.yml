@@ -15,7 +15,9 @@ services:
     volumes:
       - ./data:/app/data
     ports:
-      - "8090:8080"
+      # Em produção, o workflow define APP_BIND_ADDRESS como o IP Tailscale
+      # da VPS. O fallback localhost mantém o uso local fora da rede.
+      - "${APP_BIND_ADDRESS:-127.0.0.1}:8090:8080"
 
   frontend:
     build:
@@ -28,4 +30,4 @@ services:
     container_name: estoque-frontend
     restart: unless-stopped
     ports:
-      - "8092:80"
+      - "${APP_BIND_ADDRESS:-127.0.0.1}:8092:80"

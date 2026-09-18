@@ -78,10 +78,6 @@ func ExtrairProdutosDeImagemViaOCRSpace(ctx context.Context, imagem []byte, apiK
 
 	produtos := interpretarTextoOCR(texto)
 	if len(produtos) == 0 {
-		// Mesmo debug usado pelo fluxo do Tesseract — mesma mecânica,
-		// mesma forma de diagnosticar se o texto veio limpo mas o parser
-		// não reconheceu o formato.
-		salvarDebugOCR(texto)
 		return nil, ErrOCRSemItens
 	}
 

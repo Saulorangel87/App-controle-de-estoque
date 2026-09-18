@@ -16,7 +16,6 @@ import (
 	"strings"
 	"time"
 
-	"controle-estoque/config"
 	"controle-estoque/models"
 )
 
@@ -152,31 +151,13 @@ func tentarComPSMs(ctx context.Context, imagemDecodificada image.Image, psms []s
 }
 
 // finalizarExtracao centraliza a decisão final: se algum ângulo testado
-// encontrou itens, devolve o melhor resultado; senão, salva o texto de
-// debug (da melhor tentativa, mesmo vazia) e devolve o erro apropriado.
+// encontrou itens, devolve o melhor resultado; senão, devolve o erro apropriado.
 func finalizarExtracao(texto string, produtos []models.ProdXML) ([]models.ProdXML, error) {
 	if len(produtos) == 0 {
-		// DEBUG TEMPORÁRIO — enquanto o parser ainda está sendo calibrado:
-		// salva o texto exatamente como o Tesseract devolveu, pra dar pra
-		// ver o que ele realmente leu (em vez de advinhar pelo regex).
-		// Depois que o parser estiver validado, pode remover este bloco e
-		// a função salvarDebugOCR.
-		salvarDebugOCR(texto)
 		return nil, ErrOCRSemItens
 	}
 
 	return produtos, nil
-}
-
-// salvarDebugOCR grava o texto bruto da última leitura de OCR num arquivo
-// local, na pasta onde o backend está rodando. É só uma ferramenta de
-// depuração enquanto ajustamos o parser — falha em salvar é ignorada de
-// propósito, nunca deve quebrar a resposta ao usuário.
-func salvarDebugOCR(texto string) {
-	if !config.DebugOCRAtivo() {
-		return
-	}
-	_ = os.WriteFile("debug_ocr_ultimo_texto.txt", []byte(texto), 0o600)
 }
 
 // rodarOCR salva a imagem (já pré-processada) num arquivo temporário e

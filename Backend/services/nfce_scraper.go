@@ -7,12 +7,10 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"os"
 	"regexp"
 	"strings"
 	"time"
 
-	"controle-estoque/config"
 	"github.com/PuerkitoBio/goquery"
 
 	"controle-estoque/models"
@@ -143,30 +141,12 @@ func buscarDocumento(urlNota string) (*goquery.Document, error) {
 		return nil, ErrConsultaFalhou
 	}
 
-	// DEBUG TEMPORÁRIO — enquanto o parser ainda não foi validado contra o
-	// site real: salva sempre o HTML exatamente como o Go recebeu (pode ser
-	// diferente do que aparece no navegador, se a página carregar itens via
-	// JavaScript depois do carregamento inicial). Depois que o parser
-	// estiver validado, pode remover este bloco e a função salvarHTMLDebug.
-	salvarHTMLDebug(corpoBruto)
-
 	documento, err := goquery.NewDocumentFromReader(bytes.NewReader(corpoBruto))
 	if err != nil {
 		return nil, ErrConsultaFalhou
 	}
 
 	return documento, nil
-}
-
-// salvarHTMLDebug grava a última resposta da SEFAZ num arquivo local, na
-// pasta onde o backend está rodando. É só uma ferramenta de depuração
-// enquanto ajustamos o parser — não afeta o funcionamento normal do app
-// (falha em salvar é ignorada de propósito, nunca deve quebrar a consulta).
-func salvarHTMLDebug(html []byte) {
-	if !config.DebugOCRAtivo() {
-		return
-	}
-	_ = os.WriteFile("debug_nfce_ultima_consulta.html", html, 0o600)
 }
 
 // padrãoValorMonetario reconhece números no formato brasileiro (vírgula
