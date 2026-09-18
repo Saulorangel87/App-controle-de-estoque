@@ -32,7 +32,7 @@ type cadastroEntrada struct {
 }
 
 const (
-	tamanhoMinimoSenha       = 12
+	tamanhoMinimoSenha       = 8
 	tamanhoMaximoSenhaBytes  = 72 // limite efetivo aceito pelo bcrypt
 	tamanhoMaximoNomeUsuario = 100
 	tamanhoMaximoPergunta    = 200
@@ -41,7 +41,7 @@ const (
 
 func validarSenha(senha string) error {
 	if utf8.RuneCountInString(senha) < tamanhoMinimoSenha {
-		return errors.New("a senha deve ter pelo menos 12 caracteres")
+		return errors.New("a senha deve ter pelo menos 8 caracteres")
 	}
 	if len([]byte(senha)) > tamanhoMaximoSenhaBytes {
 		return errors.New("a senha excede o limite permitido")

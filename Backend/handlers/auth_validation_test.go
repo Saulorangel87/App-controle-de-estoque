@@ -8,11 +8,11 @@ import (
 )
 
 func TestValidarSenhaExigeMinimoApenasParaNovasCredenciais(t *testing.T) {
-	if err := validarSenha("12345678901"); err == nil {
-		t.Fatal("senha com 11 caracteres foi aceita")
+	if err := validarSenha("1234567"); err == nil {
+		t.Fatal("senha com 7 caracteres foi aceita")
 	}
-	if err := validarSenha("123456789012"); err != nil {
-		t.Fatalf("senha com 12 caracteres foi rejeitada: %v", err)
+	if err := validarSenha("12345678"); err != nil {
+		t.Fatalf("senha com 8 caracteres foi rejeitada: %v", err)
 	}
 }
 

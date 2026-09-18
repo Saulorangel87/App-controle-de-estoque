@@ -72,7 +72,7 @@ status, os arquivos afetados e as validações executadas.
   tentativas repetidas são limitadas; senha inválida é rejeitada pela API.
 - **Evidência parcial:** a consulta da pergunta continua limitada por IP e a
   redefinição já não diferencia usuário inexistente de resposta incorreta. O
-  cadastro/redefinição exigem senha de no mínimo 12 caracteres e até 72 bytes;
+  cadastro/redefinição exigem senha de no mínimo 8 caracteres e até 72 bytes;
   login continua aceitando credenciais antigas. A tabela `usuarios` ganhou
   `token_versao`, incluída no JWT e conferida em cada requisição autenticada.
   Ainda falta substituir a pergunta por código temporário entregue por canal
@@ -140,7 +140,7 @@ status, os arquivos afetados e as validações executadas.
   - [x] exigir nome, unidade e local com tamanho máximo;
   - [x] validar locais permitidos no backend;
   - [x] aplicar as regras também às entradas confirmadas de importação;
-  - [x] validar tamanho dos campos de autenticação e exigir 12 caracteres em
+  - [x] validar tamanho dos campos de autenticação e exigir 8 caracteres em
     novas senhas/redefinições;
   - [x] limitar corpos estruturados a 1 MiB no middleware global;
   - [x] repetir o mínimo de senha no frontend apenas para melhor experiência,
@@ -500,10 +500,11 @@ status, os arquivos afetados e as validações executadas.
 | 17/09/2026 | P12-A | Secrets `TAILSCALE_OAUTH_CLIENT_ID` e `TAILSCALE_OAUTH_SECRET` cadastrados no ambiente `production`; workflow migrado para OAuth com a tag exclusiva | GitHub Environment e `.github/workflows/deploy.yml`; execução de validação pendente |
 | 17/09/2026 | P12-A | Execução #17 passou após a migração para OAuth; `build-and-test` em 28s, `deploy` em 21s e duração total de 1m44s | [GitHub Actions #17](https://github.com/Saulorangel87/App-controle-de-estoque/actions/runs/35286690984); status `Success` |
 | 17/09/2026 | P1 | JWT passou a exigir emissor, audiência, `iat` e `exp` válidos; login de contas antigas foi preservado | `go test ./...`, `go vet ./...` |
-| 17/09/2026 | P5 | Limites de nome/pergunta/resposta, senha mínima de 12 caracteres para novas credenciais e corpo estruturado de 1 MiB adicionados | `go test ./...`, `go vet ./...`, `git diff --check` |
+| 17/09/2026 | P5 | Limites de nome/pergunta/resposta, senha mínima de 8 caracteres para novas credenciais e corpo estruturado de 1 MiB adicionados | `go test ./...`, `go vet ./...`, `git diff --check` |
 | 17/09/2026 | P8 | Tesseract passou a respeitar cancelamento da requisição e teto de 40s; ampliação de imagens grandes foi reduzida | `go test ./...`, `go vet ./...`, `git diff --check` |
 | 17/09/2026 | P12/P13 | React Router atualizado para `7.18.2`; lint, auditoria de produção e testes Go adicionados ao workflow | `npm run lint`, `npm run build`, `npm audit --omit=dev`, `git diff --check` |
 | 17/09/2026 | P2/P12-A/P15 | Documento corrigido com pendências reais: canal verificado de recuperação, limpeza da credencial Tailscale legada e hardening de container/rede | Revisão do código, workflow e configuração versionada |
+| 17/09/2026 | P2/P5 | Política mínima ajustada de 12 para 8 caracteres em novas senhas e redefinições; credenciais antigas continuam funcionando no login | `go test ./... -count=3`, `go vet ./...`, `npm run lint`, `npm run build`, `npm audit --omit=dev --audit-level=high` |
 
 ## Registro de decisões e riscos aceitos
 

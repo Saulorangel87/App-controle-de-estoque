@@ -176,7 +176,7 @@ export default function Login() {
                   modo === MODOS.CADASTRO ? "new-password" : "current-password"
                 }
                 required
-                minLength={modo === MODOS.CADASTRO ? 12 : undefined}
+                minLength={modo === MODOS.CADASTRO ? 8 : undefined}
                 maxLength={72}
                 value={senha}
                 onChange={(e) => setSenha(e.target.value)}
@@ -278,7 +278,7 @@ export default function Login() {
                 type="password"
                 autoComplete="new-password"
                 required
-                minLength={12}
+                minLength={8}
                 maxLength={72}
                 value={novaSenha}
                 onChange={(e) => setNovaSenha(e.target.value)}
