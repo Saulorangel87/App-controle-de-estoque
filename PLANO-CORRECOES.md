@@ -56,7 +56,8 @@ status, os arquivos afetados e as validações executadas.
 ### P2. Corrigir recuperação de senha
 
 - **Status:** Em andamento — invalidação e redução parcial de enumeração
-  implementadas; a recuperação segura ainda depende de canal verificado.
+  implementadas; o provedor Resend está disponível, mas a integração segura
+  ainda precisa ser implementada.
 - **Arquivos previstos:** `Backend/main.go`, `Backend/handlers/auth.go`,
   `Backend/middleware/ratelimit.go`, frontend de login.
 - **Ações:**
@@ -66,7 +67,10 @@ status, os arquivos afetados e as validações executadas.
   - [ ] eliminar a exposição da pergunta e demais diferenças observáveis no
     fluxo completo;
   - [x] validar tamanho da nova senha no backend, respeitando o limite do bcrypt;
-  - [ ] avaliar substituição da pergunta de segurança por código temporário/e-mail;
+  - [ ] adicionar e-mail associado à conta e fluxo de verificação;
+  - [ ] configurar `RESEND_API_KEY` e `RESEND_FROM_EMAIL` somente na VPS;
+  - [ ] integrar envio de código temporário pelo Resend sem registrar a API key;
+  - [ ] substituir a pergunta de segurança por código temporário/e-mail;
   - [x] invalidar sessões/tokens existentes após redefinição por `token_versao`;
 - **Critérios de aceite:** não é possível enumerar usuários por respostas distintas;
   tentativas repetidas são limitadas; senha inválida é rejeitada pela API.
@@ -75,9 +79,10 @@ status, os arquivos afetados e as validações executadas.
   cadastro/redefinição exigem senha de no mínimo 8 caracteres e até 72 bytes;
   login continua aceitando credenciais antigas. A tabela `usuarios` ganhou
   `token_versao`, incluída no JWT e conferida em cada requisição autenticada.
-  Ainda falta substituir a pergunta por código temporário entregue por canal
-  verificado; sem e-mail, SMS ou outro canal configurado não é seguro marcar
-  essa vulnerabilidade como encerrada.
+  Ainda falta substituir a pergunta por código temporário entregue pelo Resend;
+  o aplicativo ainda não possui campo de e-mail, armazenamento de token de uso
+  único nem integração de envio. A API key e o endereço remetente deverão ficar
+  somente na configuração protegida da VPS.
 
 ### P3. Tornar o rate limit confiável
 
@@ -120,15 +125,17 @@ status, os arquivos afetados e as validações executadas.
   - [x] enviar credenciais em chamadas da API e habilitar CORS credentials;
   - [x] limpar cookie e invalidar a versão da sessão no logout;
   - [x] proteger métodos mutáveis autenticados por cookie com validação da origem;
-  - [ ] validar login, reload, logout, expiração e PWA no build/container.
+  - [x] validar login em produção e PWA instalado no celular;
+  - [ ] validar reload, logout e expiração da sessão no ambiente publicado.
 - **Critérios de aceite:** decisão arquitetural registrada e fluxo de login,
   logout, expiração e renovação coberto por testes.
 - **Evidência parcial:** backend emite/valida cookie de sessão e frontend não
   grava mais JWT; a sessão é restaurada por `/sessao`. `go test ./...`,
   `go vet ./...` e `git diff --check` passaram em 17/09/2026. O build frontend
   passou em 17/09/2026; a proteção CSRF foi adicionada no middleware global para
-  operações mutáveis autenticadas por cookie. A validação funcional no container
-  ainda está pendente.
+  operações mutáveis autenticadas por cookie. Login e PWA instalado no celular
+  foram confirmados pelo usuário; reload, logout e expiração ainda aguardam
+  validação funcional.
 
 ## Fase 2 — Integridade do estoque e validação de entrada
 
@@ -443,21 +450,23 @@ status, os arquivos afetados e as validações executadas.
 4. Confirmar periodicamente que não há arquivos de debug na VPS.
 5. Validar usuário não privilegiado e exposição de portas do Docker com o
    Cloudflare Tunnel/firewall efetivos.
-6. Substituir a recuperação por pergunta por código temporário entregue por
-   canal verificado.
+6. Integrar o Resend, cadastrar e verificar o e-mail da conta e substituir a
+   recuperação por pergunta por código temporário.
 7. Depois de confirmar que nenhum workflow usa a credencial antiga, remover o
    secret `TAILSCALE_AUTHKEY` e revogar a auth key legada no Tailscale.
 
 ## Pendências que impedem declarar o projeto encerrado
 
-- recuperação de senha ainda usa pergunta de segurança e não possui canal
-  verificado para entrega de código de uso único;
+- recuperação de senha ainda usa pergunta de segurança; o Resend está
+  disponível, mas faltam o campo/e-mail verificado, o token de uso único e a
+  integração do backend;
 - rate limit ainda é local ao processo, embora já combine IP e conta;
 - configuração efetiva de `TRUSTED_PROXY_CIDRS`, firewall e túnel não está
   comprovada neste checkout;
 - usuário não-root do backend e bind de portas precisam ser validados com os
   volumes e o túnel reais;
-- arquivos de debug e fluxos de headers/PWA/OCR precisam de verificação na VPS;
+- fluxos de headers, reload/logout/expiração e OCR precisam de verificação na
+  VPS; PWA e login já foram confirmados;
 - limpeza da credencial Tailscale legada ainda requer confirmação operacional;
 - não há testes automatizados de componentes ou navegador no frontend.
 
@@ -528,6 +537,7 @@ status, os arquivos afetados e as validações executadas.
 | 18/09/2026 | P8 | Validação de câmera/imagens reais de notas adiada para etapa posterior a pedido do usuário | Decisão registrada; limites e timeouts permanecem cobertos por testes |
 | 18/09/2026 | P15 | Dockerfile preparado para executar o backend com UID/GID fixos `10001:10001`; deploy e ajuste da posse do volume ainda pendentes | `Backend.Dockerfile`; validação remota confirmou o volume atual `root:root` |
 | 18/09/2026 | P9/P15 | Gravações de debug removidas; Compose passou a vincular portas ao `APP_BIND_ADDRESS` e o workflow prepara a posse do volume e usa o IP Tailscale descoberto na VPS | `go test ./... -count=3`, `go vet ./...`, `docker compose config --quiet`, `git diff --check` |
+| 18/09/2026 | P4/P12-A/P2 | PWA instalado no celular confirmado; screenshot confirma que `TAILSCALE_AUTHKEY` ainda existe; Resend disponível externamente, mas sem integração no código atual | Relato do usuário; GitHub Environment; inspeção do código |
 
 ## Registro de decisões e riscos aceitos
 
