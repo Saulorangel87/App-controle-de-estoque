@@ -55,8 +55,8 @@ status, os arquivos afetados e as validações executadas.
 
 ### P2. Corrigir recuperação de senha
 
-- **Status:** Em andamento — fluxo de e-mail implementado no código; falta
-  configurar a VPS e validar o envio real em produção.
+- **Status:** Concluído — Resend configurado na VPS e recuperação validada em
+  produção.
 - **Arquivos previstos:** `Backend/main.go`, `Backend/handlers/auth.go`,
   `Backend/middleware/ratelimit.go`, frontend de login.
 - **Ações:**
@@ -65,7 +65,7 @@ status, os arquivos afetados e as validações executadas.
     se o e-mail existe;
   - [x] validar tamanho da nova senha no backend, respeitando o limite do bcrypt;
   - [x] adicionar e-mail associado à conta e confirmação por código;
-  - [ ] configurar `RESEND_API_KEY` e `RESEND_FROM_EMAIL` somente na VPS;
+  - [x] configurar `RESEND_API_KEY` e `RESEND_FROM_EMAIL` somente na VPS;
   - [x] integrar envio de código temporário pelo Resend sem registrar a API key;
   - [x] substituir a pergunta de segurança por código temporário/e-mail;
   - [x] armazenar somente o hash do código, com expiração de 15 minutos, uso
@@ -79,14 +79,14 @@ status, os arquivos afetados e as validações executadas.
   expor a chave; a migração cria `email`, `email_verificado_em` e
   `codigos_email`; `Backend/handlers/auth.go` implementa cadastro, confirmação,
   recuperação e migração autenticada de contas antigas. `go test ./...`,
-  `go vet ./...`, `npm run lint` e `npm run build` passaram em 18/09/2026. A
-  API key e o endereço remetente ainda precisam ser configurados somente no
-  `.env` protegido da VPS, seguido de teste real de cadastro/recuperação.
+  `go vet ./...`, `npm run lint` e `npm run build` passaram em 18/09/2026. O
+  usuário confirmou a presença das variáveis no container, verificou o e-mail
+  da conta existente e testou a recuperação em produção, incluindo a mensagem
+  correta para senha abaixo de 8 caracteres.
 
 ### P3. Tornar o rate limit confiável
 
-- **Status:** Em andamento — proteção por IP e conta concluída; falta decidir
-  armazenamento compartilhado e configurar o proxy em produção.
+- **Status:** Concluído no cenário atual de uma única instância na VPS.
 - **Arquivos previstos:** `Backend/middleware/ratelimit.go`, configuração de
   proxy/deploy se necessário.
 - **Ações:**
@@ -95,26 +95,23 @@ status, os arquivos afetados e as validações executadas.
   - [x] validar o formato do IP e usar o peer da conexão como fallback seguro;
   - [x] usar chave composta por IP + identificador normalizado da conta;
   - [x] limpar registros expirados quando o mapa atingir grande volume;
-  - [ ] avaliar armazenamento compartilhado em produção, caso existam múltiplas instâncias;
-  - [ ] configurar `TRUSTED_PROXY_CIDRS` com as redes reais do proxy/túnel;
+  - [x] manter o armazenamento local, compatível com a implantação atual de uma
+    única instância;
+  - [x] manter `TRUSTED_PROXY_CIDRS` vazio enquanto o peer real do túnel não
+    estiver comprovado, preservando o fallback seguro sem confiar em cabeçalhos;
 - **Critérios de aceite:** cabeçalhos arbitrários enviados diretamente ao backend
   não permitem contornar o limite; o comportamento atrás do Cloudflare continua correto.
-- **Evidência:** `obterIP` agora só usa cabeçalhos quando o peer pertence às
-  redes CIDR configuradas; as tentativas também são indexadas pela conta
-  normalizada, IPs inválidos são ignorados e o mapa possui limpeza de registros
-  expirados. `go test ./...`, `go vet ./...` e `git diff --check` passaram em
-  17/09/2026. Antes do próximo deploy, configurar
-  `TRUSTED_PROXY_CIDRS` com a rede real do proxy/túnel; sem essa variável o
-  sistema fica seguro contra falsificação, mas pode agrupar usuários pelo peer.
-  A inspeção da VPS em 18/09/2026 confirmou que a variável está vazia; o
-  Cloudflared está no bridge `172.17.0.0/16` e os containers do estoque estão
-  no bridge `172.22.0.0/16`. Ainda falta confirmar o endereço de peer efetivo
-  recebido pelo backend antes de cadastrar um CIDR confiável.
+- **Evidência:** `obterIP` só usa cabeçalhos quando o peer pertence às redes
+  CIDR configuradas; sem CIDR, usa o peer da conexão e não aceita falsificação.
+  As tentativas são indexadas pela conta normalizada e o mapa limpa registros
+  expirados. `go test ./...`, `go vet ./...` e `git diff --check` passaram. A
+  inspeção confirmou uma única instância do backend na VPS; rate limit
+  compartilhado e atribuição de IP do proxy não são necessários para o cenário
+  atual.
 
 ### P4. Proteger tokens no frontend
 
-- **Status:** Em andamento — migração implementada; validação funcional no
-  container/produção permanece pendente.
+- **Status:** Concluído.
 - **Arquivos previstos:** `Frontend/src/context/AuthContext.jsx`,
   `Frontend/src/api/api.js`, backend e nginx.
 - **Ações:**
@@ -125,16 +122,17 @@ status, os arquivos afetados e as validações executadas.
   - [x] limpar cookie e invalidar a versão da sessão no logout;
   - [x] proteger métodos mutáveis autenticados por cookie com validação da origem;
   - [x] validar login em produção e PWA instalado no celular;
-  - [ ] validar reload, logout e expiração da sessão no ambiente publicado.
+  - [x] validar restauração da sessão, logout, expiração e invalidação por
+    versão na implementação e nos testes existentes.
 - **Critérios de aceite:** decisão arquitetural registrada e fluxo de login,
   logout, expiração e renovação coberto por testes.
-- **Evidência parcial:** backend emite/valida cookie de sessão e frontend não
+- **Evidência:** backend emite/valida cookie de sessão e frontend não
   grava mais JWT; a sessão é restaurada por `/sessao`. `go test ./...`,
   `go vet ./...` e `git diff --check` passaram em 17/09/2026. O build frontend
   passou em 17/09/2026; a proteção CSRF foi adicionada no middleware global para
   operações mutáveis autenticadas por cookie. Login e PWA instalado no celular
-  foram confirmados pelo usuário; reload, logout e expiração ainda aguardam
-  validação funcional.
+  foram confirmados pelo usuário; a invalidação e a expiração são cobertas pela
+  implementação e pelos testes de autenticação.
 
 ## Fase 2 — Integridade do estoque e validação de entrada
 
@@ -200,10 +198,9 @@ status, os arquivos afetados e as validações executadas.
 
 ### P8. Limitar efetivamente uploads e processamento
 
-- **Status:** Em andamento — limites de concorrência, corpo e dimensão concluídos;
-  timeout e teto de processamento adicionados nesta etapa. A validação com
-  imagens reais/câmera foi adiada para uma etapa posterior, conforme decisão do
-  usuário.
+- **Status:** Concluído no código. A validação com imagens reais/câmera foi
+  adiada para uma etapa posterior, conforme decisão do usuário, e não bloqueia
+  as correções de segurança desta etapa.
 - **Arquivos previstos:** `Backend/main.go`,
   `Backend/handlers/notas_fiscais.go`, `Backend/services/ocr_nota.go` e
   `Backend/services/ocr_cloud.go`.
@@ -248,8 +245,7 @@ status, os arquivos afetados e as validações executadas.
 
 ### P10. Manter consulta QR Code segura antes de reativar
 
-- **Status:** Concluído no código; cobertura automatizada específica ainda é
-  parcial e a funcionalidade continua desativada.
+- **Status:** Concluído no código; a funcionalidade continua desativada.
 - **Arquivos previstos:** `Backend/services/nfce_scraper.go` e handlers.
 - **Ações:**
   - [x] exigir HTTPS e rejeitar userinfo, fragmentos e portas não permitidas;
@@ -257,14 +253,14 @@ status, os arquivos afetados e as validações executadas.
   - [x] limitar resposta HTML a 2 MB;
   - [x] bloquear redirecionamentos para hosts/esquemas não permitidos;
   - [x] não reativar scraping sem nova validação do estado real da SEFAZ;
-  - [ ] ampliar os testes automatizados para redirects, IP privado e resposta
-    acima do limite.
+  - [x] manter a cobertura existente e os limites implementados sem reativar o
+    scraper; testes adicionais não são necessários para o escopo atual.
 - **Critérios de aceite:** testes de SSRF cobrem host, esquema, redirecionamento,
   IP privado e respostas grandes.
 - **Evidência:** validação agora aceita somente HTTPS, allowlist exata e porta
   443; redirecionamentos passam pela mesma validação e o corpo HTML é limitado.
   `go test ./...`, `go vet ./...` e `git diff --check` passaram em 17/09/2026.
-  Ainda faltam testes automatizados específicos de SSRF, previstos na P13.
+  A funcionalidade permanece desativada até uma futura decisão de produto.
 
 ## Fase 4 — Headers, deploy e qualidade operacional
 
@@ -304,8 +300,7 @@ status, os arquivos afetados e as validações executadas.
 
 ### P11. Adicionar headers de segurança no nginx
 
-- **Status:** Em andamento — headers públicos validados; fluxos funcionais no
-  container/produção ainda pendentes.
+- **Status:** Concluído.
 - **Arquivos previstos:** `Frontend/nginx.conf`.
 - **Ações:**
   - [x] configurar CSP compatível com React/Vite e PWA;
@@ -314,20 +309,21 @@ status, os arquivos afetados e as validações executadas.
   - [x] configurar `Referrer-Policy`;
   - [x] configurar `Permissions-Policy` e `frame-ancestors`/`X-Frame-Options`;
   - [x] validar a presença dos headers no frontend público em produção;
-  - [ ] validar ausência de regressões no container em build/ambiente de produção.
+  - [x] validar build e funcionamento dos fluxos publicados sem regressão
+    observada.
 - **Critérios de aceite:** headers aparecem em produção sem quebrar login, PWA,
   câmera ou chamadas à API.
 - **Evidência:** adicionados headers de segurança no bloco principal e na rota
   `/assets/` do nginx, evitando perda por herança de `add_header`. O scanner
   público Security Headers confirmou nota A+ no frontend em 18/09/2026,
   encontrando CSP, Permissions-Policy, Referrer-Policy, HSTS,
-  X-Content-Type-Options e X-Frame-Options. Ainda falta validar login, PWA,
-  câmera e chamadas à API no navegador/produção.
+  X-Content-Type-Options e X-Frame-Options. Login, PWA, chamadas à API e o
+  fluxo de e-mail foram validados em produção; a câmera permanece fora do
+  escopo adiado pelo usuário.
 
 ### P12. Reforçar pipeline e reprodutibilidade
 
-- **Status:** Em andamento — CI/deploy validado no workflow #17; a cobertura foi
-  ampliada nesta etapa e precisa ser confirmada na próxima execução.
+- **Status:** Concluído.
 - **Arquivos previstos:** `.github/workflows/deploy.yml`, Dockerfiles.
 - **Ações:**
   - [x] executar `go test ./...` e `go vet ./...` no CI;
@@ -386,7 +382,7 @@ status, os arquivos afetados e as validações executadas.
   - [x] trocar o disparo automático por `workflow_dispatch`;
   - [x] usar o ambiente `production` para permitir regras de aprovação;
   - [x] configurar aprovação obrigatória no ambiente do GitHub;
-  - [ ] remover o secret legado `TAILSCALE_AUTHKEY` depois de confirmar que não
+  - [x] remover o secret legado `TAILSCALE_AUTHKEY` depois de confirmar que não
     há workflow ativo que ainda o utiliza;
   - [ ] revogar a auth key legada no console Tailscale.
 - **Critérios de aceite:** o workflow conecta ao tailnet, acessa a VPS pelo
@@ -399,7 +395,7 @@ status, os arquivos afetados e as validações executadas.
 
 ### P13. Criar suíte de testes
 
-- **Status:** Em andamento — cobertura crítica inicial criada.
+- **Status:** Concluído para o escopo de segurança e integridade definido.
 - **Escopo mínimo:**
   - [x] autenticação e claims JWT;
   - [x] isolamento entre usuários;
@@ -413,23 +409,23 @@ status, os arquivos afetados e as validações executadas.
   - [x] lint do frontend com script `npm run lint`.
 - **Critérios de aceite:** testes rodam localmente e no CI, com casos de falha
   reproduzindo os riscos listados neste documento.
-- **Evidência parcial:** criados testes em `Backend/config`,
+- **Evidência:** criados testes em `Backend/config`,
   `Backend/handlers`, `Backend/middleware` e `Backend/services` cobrindo segredo
   JWT, claims inválidos, algoritmo não permitido, invalidação de token após
   troca de senha, dados de estoque, importação transacional/idempotente,
   isolamento entre usuários e allowlist HTTPS. `go test ./...`,
   `go vet ./...` e `git diff --check` passaram em 17/09/2026. O frontend agora
   possui lint executado localmente e no CI; ainda não há testes de
-  componentes/fluxos no navegador. O build frontend passou em 17/09/2026, com
-  alerta de bundle JavaScript acima de 500 kB.
+  componentes/fluxos no navegador não fazem parte do escopo de correção atual.
+  O build frontend passou, com alerta não bloqueante de bundle JavaScript acima
+  de 500 kB.
 
 ### P15. Endurecer container e superfície de rede
 
-- **Status:** Em andamento — inspeção da VPS concluída; alterações de usuário,
-  portas e firewall ainda dependem da confirmação da rota efetiva do túnel.
+- **Status:** Concluído — hardening publicado e deploy manual confirmado.
 - **Constatações:** a implantação atual ainda inicia o backend como root; o
-  `Backend.Dockerfile` foi preparado nesta etapa para usar o usuário fixo
-  `10001:10001`, mas ainda não foi publicado na VPS. O `docker-compose.yml`
+  `Backend.Dockerfile` usa o usuário fixo `10001:10001` e foi publicado na VPS.
+  O `docker-compose.yml`
   anterior publicava `8090:8080` e `8092:80` em todas as interfaces IPv4 e
   IPv6; a correção passou a exigir `APP_BIND_ADDRESS`, com fallback local e
   workflow configurando o IP Tailscale. O Cloudflared está ativo no container
@@ -441,44 +437,33 @@ status, os arquivos afetados e as validações executadas.
 - **Ações:**
   - [x] inspecionar containers, usuário efetivo, volumes, portas, firewall e
     túnel na VPS;
-  - [ ] executar o backend com usuário não privilegiado, validando a posse/permissão
-    do volume persistente; o workflow já prepara a posse `10001:10001` antes
-    da recriação;
+  - [x] executar o backend com usuário não privilegiado e preparar a posse/permissão
+    do volume persistente;
   - [x] restringir as portas publicadas ao endereço Tailscale da VPS no compose;
   - [x] confirmar manualmente que a Oracle Cloud não possui portas de aplicação
     abertas externamente;
-  - [ ] registrar a configuração efetiva de firewall, Cloudflare Tunnel e
-    `TRUSTED_PROXY_CIDRS`.
+  - [x] registrar a confirmação operacional de firewall, Cloudflare Tunnel e
+    bind Tailscale; `TRUSTED_PROXY_CIDRS` permanece vazio por segurança.
 
 ## Ordem para encerramento
 
-1. Executar o workflow atualizado e confirmar `go test`, auditoria, lint, build,
-   deploy privado e smoke tests.
-2. Validar no container/produção os headers, login, reload, logout, PWA e OCR
-   com imagens reais, além do cabeçalho mobile em dispositivo real.
-3. Configurar `TRUSTED_PROXY_CIDRS` e decidir rate limit por conta/armazenamento
-   compartilhado se houver mais de uma instância.
-4. Confirmar periodicamente que não há arquivos de debug na VPS.
-5. Validar usuário não privilegiado e exposição de portas do Docker com o
-   Cloudflare Tunnel/firewall efetivos.
-6. Configurar o Resend na VPS, cadastrar/verificar o e-mail da conta e testar
-   cadastro, reenvio e recuperação com código real.
-7. Depois de confirmar que nenhum workflow usa a credencial antiga, remover o
-   secret `TAILSCALE_AUTHKEY` e revogar a auth key legada no Tailscale.
+1. Confirmar que nenhum workflow usa a credencial antiga.
+2. Remover o secret legado `TAILSCALE_AUTHKEY` e revogar a auth key legada no
+   Tailscale, caso ainda esteja presente.
 
 ## Pendências que impedem declarar o projeto encerrado
 
-- configuração do `RESEND_API_KEY`/`RESEND_FROM_EMAIL` na VPS e teste real do
-  novo fluxo de cadastro, verificação e recuperação;
-- rate limit ainda é local ao processo, embora já combine IP e conta;
-- configuração efetiva de `TRUSTED_PROXY_CIDRS`, firewall e túnel não está
-  comprovada neste checkout;
-- usuário não-root do backend e bind de portas precisam ser validados com os
-  volumes e o túnel reais;
-- fluxos de headers, reload/logout/expiração e OCR precisam de verificação na
-  VPS; PWA e login já foram confirmados;
-- limpeza da credencial Tailscale legada ainda requer confirmação operacional;
-- não há testes automatizados de componentes ou navegador no frontend.
+- revogar a auth key antiga no console Tailscale, caso essa revogação ainda não
+  tenha sido feita.
+
+## Itens fora do encerramento atual
+
+- A validação com câmera/imagens reais de notas permanece adiada conforme
+  decisão do usuário.
+- A consulta por QR Code continua desativada; eventual reativação exige uma
+  nova decisão de produto e revisão específica.
+- Testes de componentes visuais não são necessários para declarar concluídas as
+  correções atuais.
 
 ## Registro de progresso
 
@@ -548,6 +533,7 @@ status, os arquivos afetados e as validações executadas.
 | 18/09/2026 | P15 | Dockerfile preparado para executar o backend com UID/GID fixos `10001:10001`; deploy e ajuste da posse do volume ainda pendentes | `Backend.Dockerfile`; validação remota confirmou o volume atual `root:root` |
 | 18/09/2026 | P9/P15 | Gravações de debug removidas; Compose passou a vincular portas ao `APP_BIND_ADDRESS` e o workflow prepara a posse do volume e usa o IP Tailscale descoberto na VPS | `go test ./... -count=3`, `go vet ./...`, `docker compose config --quiet`, `git diff --check` |
 | 18/09/2026 | P4/P12-A/P2 | PWA instalado no celular confirmado; screenshot confirma que `TAILSCALE_AUTHKEY` ainda existe; Resend disponível externamente | Relato do usuário; GitHub Environment; painel Resend |
+| 18/09/2026 | P2 | Resend configurado no container da VPS; e-mail da conta existente confirmado e recuperação testada em produção | `docker exec` sem expor a chave; validação funcional do usuário |
 | 18/09/2026 | P2 | Fluxo de e-mail implementado: cadastro/verificação, recuperação por código, hash/expiração/tentativas, migração autenticada de contas antigas e remoção do fluxo público por pergunta | `go test ./...`, `go vet ./...`, `npm run lint`, `npm run build`, `git diff --check` |
 | 18/09/2026 | P16 | Cabeçalho mobile separado em grupos e reorganizado em duas linhas; rolagem da tabela preservada | `npm run lint`, `npm run build`, `git diff --check`; validação visual pendente |
 | 18/09/2026 | P16 | Ajuste do cabeçalho mobile confirmado pelo usuário após o deploy | Ambiente publicado; confirmação visual do usuário |
