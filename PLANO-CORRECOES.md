@@ -290,6 +290,20 @@ status, os arquivos afetados e as validações executadas.
   durante a operação. O build frontend passou nesta etapa e no CI; a validação
   funcional no navegador/produção continua recomendada.
 
+### P16. Corrigir overflow horizontal no cabeçalho mobile
+
+- **Status:** Em andamento — correção implementada; falta confirmar no navegador
+  em dispositivo real.
+- **Arquivos:** `Frontend/src/pages/Dashboard.jsx` e `Frontend/src/index.css`.
+- **Ações:**
+  - [x] separar ações principais e ações da conta no cabeçalho;
+  - [x] distribuir os controles em duas linhas abaixo de 600px;
+  - [x] manter a rolagem horizontal restrita à tabela de produtos;
+  - [ ] validar visualmente em 385px e em um celular real.
+- **Evidência:** `npm run lint`, `npm run build` e `git diff --check` passaram em
+  18/09/2026. O build mantém apenas o alerta já existente de bundle acima de
+  500 kB.
+
 ### P11. Adicionar headers de segurança no nginx
 
 - **Status:** Em andamento — headers públicos validados; fluxos funcionais no
@@ -443,7 +457,7 @@ status, os arquivos afetados e as validações executadas.
 1. Executar o workflow atualizado e confirmar `go test`, auditoria, lint, build,
    deploy privado e smoke tests.
 2. Validar no container/produção os headers, login, reload, logout, PWA e OCR
-   com imagens reais.
+   com imagens reais, além do cabeçalho mobile em dispositivo real.
 3. Configurar `TRUSTED_PROXY_CIDRS` e decidir rate limit por conta/armazenamento
    compartilhado se houver mais de uma instância.
 4. Confirmar periodicamente que não há arquivos de debug na VPS.
@@ -465,6 +479,7 @@ status, os arquivos afetados e as validações executadas.
   volumes e o túnel reais;
 - fluxos de headers, reload/logout/expiração e OCR precisam de verificação na
   VPS; PWA e login já foram confirmados;
+- ajuste do cabeçalho mobile ainda precisa de confirmação visual no navegador;
 - limpeza da credencial Tailscale legada ainda requer confirmação operacional;
 - não há testes automatizados de componentes ou navegador no frontend.
 
@@ -537,6 +552,7 @@ status, os arquivos afetados e as validações executadas.
 | 18/09/2026 | P9/P15 | Gravações de debug removidas; Compose passou a vincular portas ao `APP_BIND_ADDRESS` e o workflow prepara a posse do volume e usa o IP Tailscale descoberto na VPS | `go test ./... -count=3`, `go vet ./...`, `docker compose config --quiet`, `git diff --check` |
 | 18/09/2026 | P4/P12-A/P2 | PWA instalado no celular confirmado; screenshot confirma que `TAILSCALE_AUTHKEY` ainda existe; Resend disponível externamente | Relato do usuário; GitHub Environment; painel Resend |
 | 18/09/2026 | P2 | Fluxo de e-mail implementado: cadastro/verificação, recuperação por código, hash/expiração/tentativas, migração autenticada de contas antigas e remoção do fluxo público por pergunta | `go test ./...`, `go vet ./...`, `npm run lint`, `npm run build`, `git diff --check` |
+| 18/09/2026 | P16 | Cabeçalho mobile separado em grupos e reorganizado em duas linhas; rolagem da tabela preservada | `npm run lint`, `npm run build`, `git diff --check`; validação visual pendente |
 
 ## Registro de decisões e riscos aceitos
 

@@ -437,6 +437,13 @@ tr:last-child td {
   gap: var(--espaco-2);
 }
 
+.acoes-principais,
+.acoes-conta {
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-2);
+}
+
 .badge-conta {
   display: inline-flex;
   align-items: center;
@@ -463,4 +470,57 @@ tr:last-child td {
 }
 .botao-tema:hover {
   background-color: var(--cor-fundo);
+}
+
+/* Em telas estreitas, as ações deixam de disputar uma única linha com o
+   título. As ações da tabela continuam com rolagem própria em
+   .tabela-container; esta regra trata apenas do cabeçalho da página. */
+@media (max-width: 600px) {
+  .pagina {
+    padding-left: var(--espaco-3);
+    padding-right: var(--espaco-3);
+  }
+
+  .cabecalho-pagina {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .cabecalho-pagina > :first-child {
+    width: 100%;
+  }
+
+  .acoes-cabecalho {
+    align-items: stretch;
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .acoes-principais {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .acoes-conta {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) 44px minmax(0, 1fr);
+    width: 100%;
+  }
+
+  .acoes-principais > .botao,
+  .acoes-conta > .botao {
+    justify-content: center;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .acoes-conta > .botao-tema {
+    justify-self: stretch;
+    width: 44px;
+  }
+
+  .acoes-conta > .badge-conta {
+    justify-self: center;
+  }
 }

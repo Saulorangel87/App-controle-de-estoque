@@ -134,54 +134,58 @@ export default function Dashboard() {
         </div>
 
         <div className="acoes-cabecalho">
-          <button
-            type="button"
-            className="botao botao-secundario"
-            onClick={() => setImportandoNota(true)}
-          >
-            Importar nota
-          </button>
-
-          <button
-            type="button"
-            className="botao botao-primario"
-            onClick={() => setItemEmEdicao(null)}
-          >
-            + Item
-          </button>
-
-          <button
-            type="button"
-            className="botao-tema"
-            onClick={alternarTema}
-            aria-label={
-              tema === "claro" ? "Mudar para tema escuro" : "Mudar para tema claro"
-            }
-          >
-            <span aria-hidden="true">{tema === "claro" ? "🌙" : "☀️"}</span>
-          </button>
-
-          <button
-            type="button"
-            className="botao botao-secundario"
-            onClick={() => setEmailContaAberto(true)}
-          >
-            E-mail
-          </button>
-
-          {nomeExibicao && (
-            <span
-              className="badge-conta"
-              title={nomeExibicao}
-              aria-label={`Conta: ${nomeExibicao}`}
+          <div className="acoes-principais">
+            <button
+              type="button"
+              className="botao botao-secundario"
+              onClick={() => setImportandoNota(true)}
             >
-              {iniciaisConta}
-            </span>
-          )}
+              Importar nota
+            </button>
 
-          <button type="button" className="botao botao-secundario" onClick={sair}>
-            Sair
-          </button>
+            <button
+              type="button"
+              className="botao botao-primario"
+              onClick={() => setItemEmEdicao(null)}
+            >
+              + Item
+            </button>
+          </div>
+
+          <div className="acoes-conta">
+            <button
+              type="button"
+              className="botao-tema"
+              onClick={alternarTema}
+              aria-label={
+                tema === "claro" ? "Mudar para tema escuro" : "Mudar para tema claro"
+              }
+            >
+              <span aria-hidden="true">{tema === "claro" ? "🌙" : "☀️"}</span>
+            </button>
+
+            <button
+              type="button"
+              className="botao botao-secundario"
+              onClick={() => setEmailContaAberto(true)}
+            >
+              E-mail
+            </button>
+
+            {nomeExibicao && (
+              <span
+                className="badge-conta"
+                title={nomeExibicao}
+                aria-label={`Conta: ${nomeExibicao}`}
+              >
+                {iniciaisConta}
+              </span>
+            )}
+
+            <button type="button" className="botao botao-secundario" onClick={sair}>
+              Sair
+            </button>
+          </div>
         </div>
       </div>
 
