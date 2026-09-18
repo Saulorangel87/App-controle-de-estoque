@@ -92,7 +92,10 @@ export default function Login() {
       navegar("/");
     } catch (e) {
       setErro(
-        mensagemRateLimit(e.status) || "Código inválido ou expirado. Solicite um novo código."
+        mensagemRateLimit(e.status) ||
+          (e.status === 400 && e.message
+            ? e.message
+            : "Código inválido ou expirado. Solicite um novo código.")
       );
     } finally {
       setCarregando(false);
@@ -149,7 +152,10 @@ export default function Login() {
       setSucesso("Senha redefinida! Já pode entrar com a nova senha.");
     } catch (e) {
       setErro(
-        mensagemRateLimit(e.status) || "Código inválido ou expirado. Solicite um novo código."
+        mensagemRateLimit(e.status) ||
+          (e.status === 400 && e.message
+            ? e.message
+            : "Código inválido ou expirado. Solicite um novo código.")
       );
     } finally {
       setCarregando(false);

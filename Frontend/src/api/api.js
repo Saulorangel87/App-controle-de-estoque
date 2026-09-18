@@ -30,7 +30,7 @@ async function requisitar(caminho, opcoes = {}, token = null) {
 
   // O backend responde erros como texto simples (http.Error), não JSON.
   if (!resposta.ok) {
-    const textoErro = await resposta.text();
+    const textoErro = (await resposta.text()).trim();
     // Anexa o status ao erro (não só a mensagem) — quem chamar essa função
     // consegue diferenciar, por exemplo, "senha errada" (401) de "bloqueado
     // por excesso de tentativas" (429), que precisam de mensagens diferentes.

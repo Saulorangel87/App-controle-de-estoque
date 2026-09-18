@@ -553,6 +553,7 @@ status, os arquivos afetados e as validações executadas.
 | 18/09/2026 | P4/P12-A/P2 | PWA instalado no celular confirmado; screenshot confirma que `TAILSCALE_AUTHKEY` ainda existe; Resend disponível externamente | Relato do usuário; GitHub Environment; painel Resend |
 | 18/09/2026 | P2 | Fluxo de e-mail implementado: cadastro/verificação, recuperação por código, hash/expiração/tentativas, migração autenticada de contas antigas e remoção do fluxo público por pergunta | `go test ./...`, `go vet ./...`, `npm run lint`, `npm run build`, `git diff --check` |
 | 18/09/2026 | P16 | Cabeçalho mobile separado em grupos e reorganizado em duas linhas; rolagem da tabela preservada | `npm run lint`, `npm run build`, `git diff --check`; validação visual pendente |
+| 18/09/2026 | P2/P5 | Frontend passou a exibir a validação real da nova senha, diferenciando senha curta de código inválido | `npm run lint`, `npm run build`, `git diff --check` |
 
 ## Registro de decisões e riscos aceitos
 
