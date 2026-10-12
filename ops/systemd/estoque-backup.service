@@ -1,0 +1,9 @@
+[Unit]
+Description=Backup criptografado do banco do Controle de Estoque
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=ubuntu
+ExecStart=/home/ubuntu/apps/App-controle-de-estoque/ops/backup-estoque.sh

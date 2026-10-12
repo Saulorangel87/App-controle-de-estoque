@@ -1,0 +1,10 @@
+[Unit]
+Description=Backup diário do banco do Controle de Estoque
+
+[Timer]
+OnCalendar=*-*-* 04:00:00 UTC
+Persistent=true
+RandomizedDelaySec=5m
+
+[Install]
+WantedBy=timers.target
