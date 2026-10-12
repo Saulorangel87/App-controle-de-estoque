@@ -3,8 +3,8 @@
 Backup diário do SQLite (`data/estoque.db`), às 04:00 UTC, por um timer do systemd.
 
 - `backup-estoque.sh`: cópia consistente pela API de backup do SQLite, confere a integridade, compacta e envia.
-- Destino: Oracle Object Storage (bucket `cadencia-backups`, prefixo `estoque/`) por um remote `crypt` do rclone (`estoque-crypt:`). Conteúdo e nomes saem da VPS já criptografados.
-- Retenção de 30 dias: regra de ciclo de vida do bucket para o prefixo `estoque/`. A VPS não tem permissão de apagar objetos, de propósito.
+- Destino: Oracle Object Storage (bucket `backups-vps`, pasta `estoque/`) por um remote `crypt` do rclone (`estoque-crypt:`). Conteúdo e nomes saem da VPS já criptografados.
+- Retenção de 30 dias: uma regra de ciclo de vida do bucket inteiro (`expirar-30-dias`). A VPS não tem permissão de apagar objetos, de propósito.
 - Nada em claro vai para o disco: o arquivo temporário fica em `/dev/shm`.
 - As senhas do remote `crypt` ficam em `~/.config/rclone/rclone.conf` da VPS **e** em um gerenciador de senhas. Sem elas, os backups não abrem.
 
