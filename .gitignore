@@ -11,3 +11,4 @@ Frontend/.env
 
 # Deploy em produção (só existe na VM, nunca no seu PC)
 data/
+/.env
